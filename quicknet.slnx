@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/QuickNET.App/QuickNET.App.csproj" />
+    <Project Path="src/QuickNET.Core/QuickNET.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/QuickNET.Tests/QuickNET.Tests.csproj" />
+  </Folder>
+</Solution>

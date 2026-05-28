@@ -1,0 +1,12 @@
+﻿<Project Sdk="MSTest.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\QuickNET.Core\QuickNET.Core.csproj" />
+    <ProjectReference Include="..\..\src\QuickNET.App\QuickNET.App.csproj" />
+  </ItemGroup>
+
+</Project>
