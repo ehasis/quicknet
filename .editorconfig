@@ -1,0 +1,28 @@
+﻿# .editorconfig
+# This file is used to configure code style and diagnostic rules.
+# It includes settings for both C# and Visual Basic files to ensure consistent
+# coding standards. The settings help to manage warnings and errors, and enforce
+# specific coding styles across the project.
+
+[*.{csproj,props,slnx,targets,vbproj,xml}]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+[*.{cs,vb}]
+end_of_line = crlf
+indent_style = space
+indent_size = 4
+tab_width = 4
+dotnet_sort_system_directives_first = true
+
+[*.vb]
+
+# IDE0017: Simplify object initialization
+dotnet_diagnostic.IDE0017.severity = none
+
+# IDE0028: Simplify collection initialization
+dotnet_diagnostic.IDE0028.severity = none
+
+# IDE1006: Naming Styles
+dotnet_diagnostic.IDE1006.severity = none
