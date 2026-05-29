@@ -21,6 +21,15 @@
                 <ComboBoxItem>C#</ComboBoxItem>
                 <ComboBoxItem>VB.NET</ComboBoxItem>
             </ComboBox>
+            <TextBlock Text="Timeout:" VerticalAlignment="Center" Margin="16,0,0,0" />
+            <ComboBox Width="100"
+                      SelectedIndex="{Binding SelectedTimeoutIndex}">
+                <ComboBoxItem>5s</ComboBoxItem>
+                <ComboBoxItem>10s</ComboBoxItem>
+                <ComboBoxItem>30s</ComboBoxItem>
+                <ComboBoxItem>60s</ComboBoxItem>
+                <ComboBoxItem>No Limit</ComboBoxItem>
+            </ComboBox>
             <Button Content="Clear"
                     Command="{Binding ClearHistoryCommand}" />
         </StackPanel>
@@ -67,8 +76,11 @@
         <Border Grid.Row="3"
                 Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
                 Padding="8,2">
-            <TextBlock Text="{Binding StatusText}"
-                       FontSize="11" />
+            <StackPanel Orientation="Horizontal" Spacing="16">
+                <TextBlock Text="{Binding StatusText}" FontSize="11" />
+                <TextBlock Text="{Binding SessionInfoText}" FontSize="11"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+            </StackPanel>
         </Border>
     </Grid>
 </Window>
