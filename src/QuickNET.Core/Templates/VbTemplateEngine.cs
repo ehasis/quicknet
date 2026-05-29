@@ -7,37 +7,32 @@ public class VbTemplateEngine : ITemplateEngine
 {
     public Language SupportedLanguage => Language.VisualBasic;
 
-    private const string Header = """
-        Imports System
-        Imports System.Collections.Generic
-        Imports System.IO
-        Imports System.Linq
-        Imports System.Text
-        Imports System.Threading.Tasks
-
-        Public Module QuickNETSession
-            Public __ConsoleOutput As String
-
-            Public Function Execute() As Object
-                Dim __sw As New StringWriter()
-                Dim __originalOut = Console.Out
-                Console.SetOut(__sw)
-                Try
-        """;
-
-    private const string Footer = """
-                Finally
-                    Console.SetOut(__originalOut)
-                    __ConsoleOutput = __sw.ToString()
-                End Try
-            End Function
-        End Module
-        """;
-
-    public string GenerateCode(string userCode)
+    public string GenerateCode(string userCode, IReadOnlyList<string>? extraImports = null)
     {
         var sb = new StringBuilder();
-        sb.AppendLine(Header);
+
+        sb.AppendLine("Imports System");
+        sb.AppendLine("Imports System.Collections.Generic");
+        sb.AppendLine("Imports System.IO");
+        sb.AppendLine("Imports System.Linq");
+        sb.AppendLine("Imports System.Text");
+        sb.AppendLine("Imports System.Threading.Tasks");
+
+        if (extraImports != null)
+        {
+            foreach (var ns in extraImports.Distinct())
+                sb.AppendLine($"Imports {ns}");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("Public Module QuickNETSession");
+        sb.AppendLine("    Public __ConsoleOutput As String");
+        sb.AppendLine();
+        sb.AppendLine("    Public Function Execute() As Object");
+        sb.AppendLine("        Dim __sw As New StringWriter()");
+        sb.AppendLine("        Dim __originalOut = Console.Out");
+        sb.AppendLine("        Console.SetOut(__sw)");
+        sb.AppendLine("        Try");
 
         var trimmed = userCode.TrimEnd('\r', '\n', ' ');
 
@@ -58,7 +53,13 @@ public class VbTemplateEngine : ITemplateEngine
             }
         }
 
-        sb.Append(Footer);
+        sb.AppendLine("        Finally");
+        sb.AppendLine("            Console.SetOut(__originalOut)");
+        sb.AppendLine("            __ConsoleOutput = __sw.ToString()");
+        sb.AppendLine("        End Try");
+        sb.AppendLine("    End Function");
+        sb.AppendLine("End Module");
+
         return sb.ToString();
     }
 

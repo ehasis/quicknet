@@ -11,8 +11,9 @@ namespace QuickNET.Compilation;
 public class CompilationService
 {
     private readonly Dictionary<Language, ITemplateEngine> _engines;
+    private readonly AssemblyResolutionService _assemblyResolver;
 
-    private static readonly List<PortableExecutableReference> References = new()
+    private static readonly List<PortableExecutableReference> DefaultReferences = new()
     {
         MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
         MetadataReference.CreateFromFile(typeof(Console).Assembly.Location),
@@ -24,9 +25,11 @@ public class CompilationService
         MetadataReference.CreateFromFile(Assembly.Load("System.Runtime").Location),
     };
 
-    public CompilationService(IEnumerable<ITemplateEngine> engines)
+    public CompilationService(IEnumerable<ITemplateEngine> engines,
+        AssemblyResolutionService assemblyResolver)
     {
         _engines = engines.ToDictionary(e => e.SupportedLanguage);
+        _assemblyResolver = assemblyResolver;
     }
 
     public CompilationResult Compile(CompilationInput input)
@@ -45,24 +48,38 @@ public class CompilationService
                 }
             };
 
-        var fullCode = engine.GenerateCode(input.SourceCode);
+        var fullCode = engine.GenerateCode(input.SourceCode, input.ExtraImports);
         var sourceText = SourceText.From(fullCode);
 
-        if (input.Language == Language.VisualBasic)
-            return CompileVisualBasic(sourceText);
+        var references = new List<PortableExecutableReference>(DefaultReferences);
+        if (input.ExtraReferences != null && input.ExtraReferences.Count > 0)
+        {
+            foreach (var refName in input.ExtraReferences)
+            {
+                var resolved = _assemblyResolver.Resolve(refName);
+                if (resolved != null)
+                    references.Add((PortableExecutableReference)resolved);
+            }
+        }
 
-        return CompileCSharp(sourceText);
+        var extraImportsCount = input.ExtraImports?.Count ?? 0;
+
+        if (input.Language == Language.VisualBasic)
+            return CompileVisualBasic(sourceText, references, extraImportsCount);
+
+        return CompileCSharp(sourceText, references, extraImportsCount);
     }
 
-    private CompilationResult CompileCSharp(SourceText sourceText)
+    private static CompilationResult CompileCSharp(SourceText sourceText,
+        List<PortableExecutableReference> references, int extraImportsCount)
     {
-        const int lineOffset = 18;
+        var lineOffset = 18 + extraImportsCount;
 
         var syntaxTree = CSharpSyntaxTree.ParseText(sourceText);
         var compilation = CSharpCompilation.Create(
             "QuickNETSession",
             new[] { syntaxTree },
-            References,
+            references,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         using var ms = new MemoryStream();
@@ -81,15 +98,16 @@ public class CompilationService
         };
     }
 
-    private CompilationResult CompileVisualBasic(SourceText sourceText)
+    private static CompilationResult CompileVisualBasic(SourceText sourceText,
+        List<PortableExecutableReference> references, int extraImportsCount)
     {
-        const int lineOffset = 15;
+        var lineOffset = 15 + extraImportsCount;
 
         var syntaxTree = VisualBasicSyntaxTree.ParseText(sourceText);
         var compilation = VisualBasicCompilation.Create(
             "QuickNETSession",
             new[] { syntaxTree },
-            References,
+            references,
             new VisualBasicCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
 
         using var ms = new MemoryStream();

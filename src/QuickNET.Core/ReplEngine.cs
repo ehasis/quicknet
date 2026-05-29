@@ -1,6 +1,7 @@
 using QuickNET.Compilation;
 using QuickNET.Execution;
 using QuickNET.Models;
+using QuickNET.Session;
 
 namespace QuickNET;
 
@@ -8,16 +9,25 @@ public class ReplEngine
 {
     private readonly CompilationService _compilation;
     private readonly ExecutionService _execution;
+    private readonly SessionState _sessionState;
 
-    public ReplEngine(CompilationService compilation, ExecutionService execution)
+    public ReplEngine(CompilationService compilation, ExecutionService execution,
+        SessionState sessionState)
     {
         _compilation = compilation;
         _execution = execution;
+        _sessionState = sessionState;
     }
 
     public ExecutionResult Execute(string sourceCode, Language language)
     {
-        var compilationInput = new CompilationInput(sourceCode, language);
+        var compilationInput = new CompilationInput(
+            sourceCode,
+            language,
+            _sessionState.ExtraReferences,
+            _sessionState.ExtraImports
+        );
+
         var compilationResult = _compilation.Compile(compilationInput);
 
         if (!compilationResult.Success)

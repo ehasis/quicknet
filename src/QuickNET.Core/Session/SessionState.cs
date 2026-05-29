@@ -84,14 +84,23 @@ public class SessionState
             if (File.Exists(_filePath))
             {
                 var json = File.ReadAllText(_filePath);
-                var loaded = JsonSerializer.Deserialize<SessionSettings>(json);
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                };
+                var loaded = JsonSerializer.Deserialize<SessionSettings>(json, options);
                 if (loaded != null)
                     _settings = loaded;
+            }
+            else
+            {
+                Save();
             }
         }
         catch (Exception ex)
         {
             Debug.WriteLine($"Failed to load settings from {_filePath}: {ex.Message}");
+            Save();
         }
     }
 

@@ -3,6 +3,7 @@ using QuickNET.App.Models;
 using QuickNET.App.ViewModels;
 using QuickNET.History;
 using QuickNET.Models;
+using QuickNET.Session;
 
 namespace QuickNET.Tests.ViewModels;
 
@@ -17,8 +18,10 @@ public sealed class MainWindowViewModelTests
         var services = new ServiceCollection();
         services.AddQuickNETCore();
         _tempDir = Path.Combine(Path.GetTempPath(), $"QuickNET_Test_{Guid.NewGuid():N}");
-        var tempPath = Path.Combine(_tempDir, "history.json");
-        services.AddSingleton(new HistoryManager(tempPath));
+        var tempHistoryPath = Path.Combine(_tempDir, "history.json");
+        var tempSettingsPath = Path.Combine(_tempDir, "settings.json");
+        services.AddSingleton(new HistoryManager(tempHistoryPath));
+        services.AddSingleton(new SessionState(tempSettingsPath));
         services.AddSingleton<HistoryService>();
         services.AddSingleton<MainWindowViewModel>();
         _provider = services.BuildServiceProvider();

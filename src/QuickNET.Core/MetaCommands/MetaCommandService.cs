@@ -1,3 +1,5 @@
+using System.Text;
+using QuickNET.Compilation;
 using QuickNET.Models;
 using QuickNET.Session;
 
@@ -6,10 +8,12 @@ namespace QuickNET.MetaCommands;
 public class MetaCommandService
 {
     private readonly SessionState _sessionState;
+    private readonly AssemblyResolutionService _assemblyResolver;
 
-    public MetaCommandService(SessionState sessionState)
+    public MetaCommandService(SessionState sessionState, AssemblyResolutionService assemblyResolver)
     {
         _sessionState = sessionState;
+        _assemblyResolver = assemblyResolver;
     }
 
     public MetaCommandResult Execute(string input)
@@ -29,10 +33,10 @@ public class MetaCommandService
             "clear" => ExecuteClear(),
             "help" => ExecuteHelp(),
             "lang" => ExecuteLang(args),
-            "reference" => NotYetImplemented(command),
-            "import" or "using" => NotYetImplemented(command),
-            "references" => NotYetImplemented(command),
-            "imports" => NotYetImplemented(command),
+            "reference" => ExecuteReference(args),
+            "import" or "using" => ExecuteImport(args),
+            "references" => ExecuteReferences(),
+            "imports" => ExecuteImports(),
             "timeout" => NotYetImplemented(command),
             _ => new MetaCommandResult
             {
@@ -112,6 +116,112 @@ public class MetaCommandService
             Command = "lang",
             DisplayText = $"Unknown language '{args}'. Use 'cs' for C# or 'vb' for VB.NET.",
             Success = false
+        };
+    }
+
+    private MetaCommandResult ExecuteReference(string? args)
+    {
+        if (string.IsNullOrWhiteSpace(args))
+            return new MetaCommandResult
+            {
+                Command = "reference",
+                DisplayText = "Usage: /reference <assembly_name>\nExample: /reference System.Text.Json",
+                Success = false
+            };
+
+        var assemblyName = args.Trim();
+        var resolved = _assemblyResolver.Resolve(assemblyName);
+
+        if (resolved == null)
+            return new MetaCommandResult
+            {
+                Command = "reference",
+                DisplayText = $"Assembly '{assemblyName}' not found in the runtime.",
+                Success = false
+            };
+
+        _sessionState.AddReference(assemblyName);
+        return new MetaCommandResult
+        {
+            Command = "reference",
+            DisplayText = $"Added reference to '{assemblyName}'.",
+            Success = true
+        };
+    }
+
+    private MetaCommandResult ExecuteImport(string? args)
+    {
+        if (string.IsNullOrWhiteSpace(args))
+            return new MetaCommandResult
+            {
+                Command = "import",
+                DisplayText = "Usage: /import <namespace> (alias: /using)\nExample: /import System.Text.Json",
+                Success = false
+            };
+
+        var ns = args.Trim();
+        _sessionState.AddImport(ns);
+        return new MetaCommandResult
+        {
+            Command = "import",
+            DisplayText = $"Added import for '{ns}'.",
+            Success = true
+        };
+    }
+
+    private MetaCommandResult ExecuteReferences()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("Default references:");
+        sb.AppendLine("  System.Runtime, System.Console, System.Linq, System.IO.FileSystem,");
+        sb.AppendLine("  System.Text.Encoding, System.Threading.Tasks");
+        sb.AppendLine();
+
+        var extraRefs = _sessionState.ExtraReferences;
+        if (extraRefs.Count > 0)
+        {
+            sb.AppendLine("Extra references (via /reference):");
+            foreach (var r in extraRefs)
+                sb.AppendLine($"  {r}");
+        }
+        else
+        {
+            sb.AppendLine("No extra references added.");
+        }
+
+        return new MetaCommandResult
+        {
+            Command = "references",
+            DisplayText = sb.ToString().TrimEnd(),
+            Success = true
+        };
+    }
+
+    private MetaCommandResult ExecuteImports()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine("Default imports:");
+        sb.AppendLine("  System, System.Collections.Generic, System.IO, System.Linq,");
+        sb.AppendLine("  System.Text, System.Threading.Tasks");
+        sb.AppendLine();
+
+        var extraImports = _sessionState.ExtraImports;
+        if (extraImports.Count > 0)
+        {
+            sb.AppendLine("Extra imports (via /import):");
+            foreach (var imp in extraImports)
+                sb.AppendLine($"  {imp}");
+        }
+        else
+        {
+            sb.AppendLine("No extra imports added.");
+        }
+
+        return new MetaCommandResult
+        {
+            Command = "imports",
+            DisplayText = sb.ToString().TrimEnd(),
+            Success = true
         };
     }
 

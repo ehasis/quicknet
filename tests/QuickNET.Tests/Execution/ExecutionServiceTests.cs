@@ -17,6 +17,7 @@ public sealed class ExecutionServiceTests
         var services = new ServiceCollection();
         services.AddSingleton<ITemplateEngine, CSharpTemplateEngine>();
         services.AddSingleton<ITemplateEngine, VbTemplateEngine>();
+        services.AddSingleton<AssemblyResolutionService>();
         services.AddSingleton<CompilationService>();
         services.AddSingleton<ExecutionService>();
         var provider = services.BuildServiceProvider();

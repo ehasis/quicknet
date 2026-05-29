@@ -7,42 +7,35 @@ public class CSharpTemplateEngine : ITemplateEngine
 {
     public Language SupportedLanguage => Language.CSharp;
 
-    private const string Header = """
-        using System;
-        using System.Collections.Generic;
-        using System.IO;
-        using System.Linq;
-        using System.Text;
-        using System.Threading.Tasks;
-
-        public static class QuickNETSession
-        {
-            public static string __ConsoleOutput;
-
-            public static object Execute()
-            {
-                var __sw = new StringWriter();
-                var __originalOut = Console.Out;
-                Console.SetOut(__sw);
-                try
-                {
-        """;
-
-    private const string Footer = """
-                }
-                finally
-                {
-                    Console.SetOut(__originalOut);
-                    __ConsoleOutput = __sw.ToString();
-                }
-            }
-        }
-        """;
-
-    public string GenerateCode(string userCode)
+    public string GenerateCode(string userCode, IReadOnlyList<string>? extraImports = null)
     {
         var sb = new StringBuilder();
-        sb.AppendLine(Header);
+
+        sb.AppendLine("using System;");
+        sb.AppendLine("using System.Collections.Generic;");
+        sb.AppendLine("using System.IO;");
+        sb.AppendLine("using System.Linq;");
+        sb.AppendLine("using System.Text;");
+        sb.AppendLine("using System.Threading.Tasks;");
+
+        if (extraImports != null)
+        {
+            foreach (var ns in extraImports.Distinct())
+                sb.AppendLine($"using {ns};");
+        }
+
+        sb.AppendLine();
+        sb.AppendLine("public static class QuickNETSession");
+        sb.AppendLine("{");
+        sb.AppendLine("    public static string __ConsoleOutput;");
+        sb.AppendLine();
+        sb.AppendLine("    public static object Execute()");
+        sb.AppendLine("    {");
+        sb.AppendLine("        var __sw = new StringWriter();");
+        sb.AppendLine("        var __originalOut = Console.Out;");
+        sb.AppendLine("        Console.SetOut(__sw);");
+        sb.AppendLine("        try");
+        sb.AppendLine("        {");
 
         var trimmed = userCode.TrimEnd('\r', '\n', ' ');
 
@@ -63,7 +56,15 @@ public class CSharpTemplateEngine : ITemplateEngine
             }
         }
 
-        sb.Append(Footer);
+        sb.AppendLine("        }");
+        sb.AppendLine("        finally");
+        sb.AppendLine("        {");
+        sb.AppendLine("            Console.SetOut(__originalOut);");
+        sb.AppendLine("            __ConsoleOutput = __sw.ToString();");
+        sb.AppendLine("        }");
+        sb.AppendLine("    }");
+        sb.AppendLine("}");
+
         return sb.ToString();
     }
 

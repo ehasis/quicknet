@@ -21,6 +21,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<HistoryService>();
         services.AddSingleton<SessionState>();
         services.AddSingleton<MetaCommandService>();
+        services.AddSingleton<AssemblyResolutionService>();
         return services;
     }
 }
