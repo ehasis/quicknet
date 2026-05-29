@@ -12,4 +12,8 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.8" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="QuickNET.Tests" />
+  </ItemGroup>
+
 </Project>

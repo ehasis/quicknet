@@ -3,7 +3,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using QuickNET.App.Models;
 using QuickNET.History;
+using QuickNET.MetaCommands;
 using QuickNET.Models;
+using QuickNET.Session;
 
 namespace QuickNET.App.ViewModels;
 
@@ -11,6 +13,8 @@ public partial class MainWindowViewModel : ObservableObject
 {
     private readonly ReplEngine _engine;
     private readonly HistoryService _history;
+    private readonly MetaCommandService _metaCommandService;
+    private readonly SessionState _sessionState;
 
     [ObservableProperty]
     private string _inputText = "";
@@ -23,11 +27,23 @@ public partial class MainWindowViewModel : ObservableObject
 
     public ObservableCollection<ConversationItem> ConversationItems { get; } = [];
 
-    public MainWindowViewModel(ReplEngine engine, HistoryService history)
+    public MainWindowViewModel(ReplEngine engine, HistoryService history,
+        MetaCommandService metaCommandService, SessionState sessionState)
     {
         _engine = engine;
         _history = history;
+        _metaCommandService = metaCommandService;
+        _sessionState = sessionState;
         LoadHistory();
+
+        _selectedLanguageIndex = _sessionState.CurrentLanguage == Language.CSharp ? 0 : 1;
+    }
+
+    partial void OnSelectedLanguageIndexChanged(int value)
+    {
+        var newLang = value == 0 ? Language.CSharp : Language.VisualBasic;
+        if (_sessionState.CurrentLanguage != newLang)
+            _sessionState.CurrentLanguage = newLang;
     }
 
     private void LoadHistory()
@@ -52,6 +68,13 @@ public partial class MainWindowViewModel : ObservableObject
     private void ExecuteCode()
     {
         if (string.IsNullOrWhiteSpace(InputText)) return;
+
+        if (MetaCommandParser.IsMetaCommand(InputText))
+        {
+            ExecuteMetaCommand(InputText);
+            InputText = "";
+            return;
+        }
 
         var language = SelectedLanguageIndex == 0 ? Language.CSharp : Language.VisualBasic;
         var langLabel = SelectedLanguageIndex == 0 ? "CSharp" : "VisualBasic";
@@ -92,6 +115,37 @@ public partial class MainWindowViewModel : ObservableObject
         _history.Record(inputLines, langLabel, outputText, !result.Success);
 
         InputText = "";
+        StatusText = result.Success ? "Ready" : "Error";
+    }
+
+    private void ExecuteMetaCommand(string input)
+    {
+        var result = _metaCommandService.Execute(input);
+
+        ConversationItems.Add(new ConversationItem
+        {
+            DisplayText = $"> {input.TrimEnd()}",
+            IsInput = true
+        });
+
+        if (result.Command == "clear")
+        {
+            ConversationItems.Clear();
+            _history.Clear();
+        }
+
+        if (result.Command == "lang" && result.Success)
+        {
+            SelectedLanguageIndex = _sessionState.CurrentLanguage == Language.CSharp ? 0 : 1;
+        }
+
+        ConversationItems.Add(new ConversationItem
+        {
+            DisplayText = result.DisplayText,
+            IsInput = false,
+            IsError = !result.Success
+        });
+
         StatusText = result.Success ? "Ready" : "Error";
     }
 
