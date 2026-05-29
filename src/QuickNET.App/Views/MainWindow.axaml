@@ -1,0 +1,73 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="using:QuickNET.App.Models"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="620"
+        x:Class="QuickNET.App.Views.MainWindow"
+        Title="QuickNET"
+        Width="900" Height="620"
+        MinWidth="600" MinHeight="400"
+        WindowStartupLocation="CenterScreen">
+
+    <Grid RowDefinitions="Auto,*,Auto,Auto">
+        <StackPanel Grid.Row="0" Orientation="Horizontal"
+                    Margin="8,6" Spacing="10">
+            <TextBlock Text="Lang:" VerticalAlignment="Center" />
+            <ComboBox x:Name="LanguageSelector" Width="120"
+                      SelectedIndex="0">
+                <ComboBoxItem>C#</ComboBoxItem>
+                <ComboBoxItem>VB.NET</ComboBoxItem>
+            </ComboBox>
+            <Button x:Name="ClearButton" Content="Clear"
+                    HorizontalAlignment="Right" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="1"
+                      AllowAutoHide="False">
+            <ItemsControl x:Name="ConversationPanel"
+                          Margin="8">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="models:ConversationItem">
+                        <StackPanel Margin="0,2">
+                            <TextBlock Text="{Binding DisplayText}"
+                                       FontFamily="Cascadia Code, Consolas, monospace"
+                                       FontSize="13" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <Border Grid.Row="2"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="8,4">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
+                            Margin="0,4,0,0">
+                    <TextBlock Text="Shift+Enter to run"
+                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                               FontSize="11"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBox x:Name="InputBox"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         FontFamily="Cascadia Code, Consolas, monospace"
+                         FontSize="14"
+                         MinHeight="28"
+                         MaxHeight="200"
+                         PlaceholderText="Type your code here..." />
+            </DockPanel>
+        </Border>
+
+        <Border Grid.Row="3"
+                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                Padding="8,2">
+            <TextBlock x:Name="StatusText"
+                       Text="Ready"
+                       FontSize="11" />
+        </Border>
+    </Grid>
+</Window>

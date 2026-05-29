@@ -1,6 +1,6 @@
 using Avalonia.Controls;
 
-namespace QuickNET.App;
+namespace QuickNET.App.Views;
 
 public partial class MainWindow : Window
 {
