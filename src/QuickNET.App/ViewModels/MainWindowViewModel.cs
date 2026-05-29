@@ -16,6 +16,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly MetaCommandService _metaCommandService;
     private readonly SessionState _sessionState;
 
+    public event EventHandler? CloseRequested;
+
     [ObservableProperty]
     private string _inputText = "";
 
@@ -120,6 +122,12 @@ public partial class MainWindowViewModel : ObservableObject
             DisplayText = $"> {input.TrimEnd()}",
             IsInput = true
         });
+
+        if (result.Command == "exit")
+        {
+            CloseRequested?.Invoke(this, EventArgs.Empty);
+            return;
+        }
 
         if (result.Command == "clear")
         {

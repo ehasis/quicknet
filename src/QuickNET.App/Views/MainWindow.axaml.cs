@@ -51,6 +51,8 @@ public partial class MainWindow : Window
                 ConversationScroller.ScrollToEnd();
             };
 
+            vm.CloseRequested += (_, _) => Close();
+
             foreach (var item in vm.ConversationItems)
                 AppendItem(item);
 

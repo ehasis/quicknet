@@ -38,6 +38,7 @@ public class MetaCommandService
             "references" => ExecuteReferences(),
             "imports" => ExecuteImports(),
             "timeout" => ExecuteTimeout(args),
+            "exit" => ExecuteExit(),
             _ => new MetaCommandResult
             {
                 Command = command,
@@ -62,6 +63,7 @@ public class MetaCommandService
         var help = """
             Available commands:
               /clear                 Clear the conversation panel and history
+              /exit                  Exit the application
               /help                  Show this help message
               /lang <cs|vb>          Switch language (cs = C#, vb = VB.NET)
               /reference <assembly>  Add an assembly reference
@@ -264,6 +266,16 @@ public class MetaCommandService
         {
             Command = "timeout",
             DisplayText = $"Execution timeout set to {label}.",
+            Success = true
+        };
+    }
+
+    private MetaCommandResult ExecuteExit()
+    {
+        return new MetaCommandResult
+        {
+            Command = "exit",
+            DisplayText = "Goodbye!",
             Success = true
         };
     }

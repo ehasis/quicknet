@@ -37,6 +37,7 @@ public sealed class MetaCommandServiceTests
         Assert.AreEqual("help", result.Command);
         Assert.Contains("Available commands", result.DisplayText);
         Assert.Contains("/clear", result.DisplayText);
+        Assert.Contains("/exit", result.DisplayText);
         Assert.Contains("/help", result.DisplayText);
         Assert.Contains("/lang", result.DisplayText);
         Assert.Contains("/reference", result.DisplayText);
@@ -280,5 +281,15 @@ public sealed class MetaCommandServiceTests
 
         Assert.IsFalse(result.Success);
         Assert.AreEqual("", result.Command);
+    }
+
+    [TestMethod]
+    public void Execute_Exit_ReturnsExitCommand()
+    {
+        var result = _service.Execute("/exit");
+
+        Assert.IsTrue(result.Success);
+        Assert.AreEqual("exit", result.Command);
+        Assert.Contains("Goodbye", result.DisplayText);
     }
 }
