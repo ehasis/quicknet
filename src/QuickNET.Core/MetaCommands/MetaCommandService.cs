@@ -2,6 +2,7 @@ using System.Text;
 using QuickNET.Compilation;
 using QuickNET.Models;
 using QuickNET.Session;
+using QuickNET.Theme;
 
 namespace QuickNET.MetaCommands;
 
@@ -9,11 +10,13 @@ public class MetaCommandService
 {
     private readonly SessionState _sessionState;
     private readonly AssemblyResolutionService _assemblyResolver;
+    private readonly ThemeService _themeService;
 
-    public MetaCommandService(SessionState sessionState, AssemblyResolutionService assemblyResolver)
+    public MetaCommandService(SessionState sessionState, AssemblyResolutionService assemblyResolver, ThemeService themeService)
     {
         _sessionState = sessionState;
         _assemblyResolver = assemblyResolver;
+        _themeService = themeService;
     }
 
     public MetaCommandResult Execute(string input)
@@ -38,6 +41,7 @@ public class MetaCommandService
             "references" => ExecuteReferences(),
             "imports" => ExecuteImports(),
             "timeout" => ExecuteTimeout(args),
+            "theme" => ExecuteTheme(args),
             "exit" => ExecuteExit(),
             _ => new MetaCommandResult
             {
@@ -70,6 +74,7 @@ public class MetaCommandService
               /import <namespace>    Add a namespace import (alias: /using)
               /references            List all referenced assemblies
               /imports               List all imported namespaces
+              /theme <light|dark|system>  Switch theme (system follows OS)
               /timeout <seconds>     Set execution timeout (0 = no limit)
             """;
         return new MetaCommandResult
@@ -267,6 +272,39 @@ public class MetaCommandService
             Command = "timeout",
             DisplayText = $"Execution timeout set to {label}.",
             Success = true
+        };
+    }
+
+    private MetaCommandResult ExecuteTheme(string? args)
+    {
+        if (string.IsNullOrWhiteSpace(args))
+        {
+            return new MetaCommandResult
+            {
+                Command = "theme",
+                DisplayText = $"Current theme: {_themeService.CurrentTheme}. Usage: /theme <light|dark|system>",
+                Success = true
+            };
+        }
+
+        var themeArg = args.Trim().ToLowerInvariant();
+        if (themeArg == "light" || themeArg == "dark" || themeArg == "system")
+        {
+            var parsed = ThemeService.ParseTheme(themeArg);
+            _themeService.CurrentTheme = parsed;
+            return new MetaCommandResult
+            {
+                Command = "theme",
+                DisplayText = $"Theme set to {parsed}.",
+                Success = true
+            };
+        }
+
+        return new MetaCommandResult
+        {
+            Command = "theme",
+            DisplayText = $"Invalid theme '{args}'. Valid values: light, dark, system.",
+            Success = false
         };
     }
 

@@ -6,6 +6,7 @@ using QuickNET.History;
 using QuickNET.MetaCommands;
 using QuickNET.Models;
 using QuickNET.Session;
+using QuickNET.Theme;
 
 namespace QuickNET.App.ViewModels;
 
@@ -15,6 +16,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly HistoryService _history;
     private readonly MetaCommandService _metaCommandService;
     private readonly SessionState _sessionState;
+    private readonly ThemeService _themeService;
 
     public event EventHandler? CloseRequested;
 
@@ -30,12 +32,14 @@ public partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<ConversationItem> ConversationItems { get; } = [];
 
     public MainWindowViewModel(ReplEngine engine, HistoryService history,
-        MetaCommandService metaCommandService, SessionState sessionState)
+        MetaCommandService metaCommandService, SessionState sessionState,
+        ThemeService themeService)
     {
         _engine = engine;
         _history = history;
         _metaCommandService = metaCommandService;
         _sessionState = sessionState;
+        _themeService = themeService;
         LoadHistory();
 
         _selectedLanguageIndex = _sessionState.CurrentLanguage == Language.CSharp ? 0 : 1;
@@ -166,7 +170,14 @@ public partial class MainWindowViewModel : ObservableObject
         {
             var lang = _sessionState.CurrentLanguage == Language.CSharp ? "C#" : "VB";
             var timeoutLabel = _sessionState.TimeoutSeconds == 0 ? "No Limit" : $"{_sessionState.TimeoutSeconds}s";
-            return $"{lang} | Timeout: {timeoutLabel} | Refs: {_sessionState.ExtraReferences.Count} | Imports: {_sessionState.ExtraImports.Count}";
+            var themeLabel = _themeService.CurrentTheme switch
+            {
+                AppTheme.Light => "Light",
+                AppTheme.Dark => "Dark",
+                _ => ""
+            };
+            var themePart = string.IsNullOrEmpty(themeLabel) ? "" : $"{themeLabel} | ";
+            return $"{themePart}{lang} | Timeout: {timeoutLabel} | Refs: {_sessionState.ExtraReferences.Count} | Imports: {_sessionState.ExtraImports.Count}";
         }
     }
 }

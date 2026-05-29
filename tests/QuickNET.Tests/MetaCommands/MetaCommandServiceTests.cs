@@ -3,6 +3,7 @@ using QuickNET.Compilation;
 using QuickNET.MetaCommands;
 using QuickNET.Models;
 using QuickNET.Session;
+using QuickNET.Theme;
 
 namespace QuickNET.Tests.MetaCommands;
 
@@ -11,6 +12,7 @@ public sealed class MetaCommandServiceTests
 {
     private readonly MetaCommandService _service;
     private readonly SessionState _sessionState;
+    private readonly ThemeService _themeService;
     private string _tempDir = "";
 
     public MetaCommandServiceTests()
@@ -18,7 +20,8 @@ public sealed class MetaCommandServiceTests
         _tempDir = Path.Combine(Path.GetTempPath(), $"QuickNET_Test_{Guid.NewGuid():N}");
         var tempFile = Path.Combine(_tempDir, "settings.json");
         _sessionState = new SessionState(tempFile);
-        _service = new MetaCommandService(_sessionState, new AssemblyResolutionService());
+        _themeService = new ThemeService(_sessionState);
+        _service = new MetaCommandService(_sessionState, new AssemblyResolutionService(), _themeService);
     }
 
     [TestCleanup]
@@ -44,6 +47,7 @@ public sealed class MetaCommandServiceTests
         Assert.Contains("/import", result.DisplayText);
         Assert.Contains("/references", result.DisplayText);
         Assert.Contains("/imports", result.DisplayText);
+        Assert.Contains("/theme", result.DisplayText);
         Assert.Contains("/timeout", result.DisplayText);
     }
 
@@ -291,5 +295,66 @@ public sealed class MetaCommandServiceTests
         Assert.IsTrue(result.Success);
         Assert.AreEqual("exit", result.Command);
         Assert.Contains("Goodbye", result.DisplayText);
+    }
+
+    [TestMethod]
+    public void Execute_Theme_Light_SetsTheme()
+    {
+        var result = _service.Execute("/theme light");
+
+        Assert.IsTrue(result.Success);
+        Assert.AreEqual("Light", _sessionState.CurrentTheme);
+        Assert.Contains("Light", result.DisplayText);
+    }
+
+    [TestMethod]
+    public void Execute_Theme_Dark_SetsTheme()
+    {
+        var result = _service.Execute("/theme dark");
+
+        Assert.IsTrue(result.Success);
+        Assert.AreEqual("Dark", _sessionState.CurrentTheme);
+        Assert.Contains("Dark", result.DisplayText);
+    }
+
+    [TestMethod]
+    public void Execute_Theme_System_SetsTheme()
+    {
+        _sessionState.CurrentTheme = "Dark";
+        var result = _service.Execute("/theme system");
+
+        Assert.IsTrue(result.Success);
+        Assert.AreEqual("System", _sessionState.CurrentTheme);
+    }
+
+    [TestMethod]
+    public void Execute_Theme_CaseInsensitive_SetsTheme()
+    {
+        var result = _service.Execute("/theme DARK");
+
+        Assert.IsTrue(result.Success);
+        Assert.AreEqual("Dark", _sessionState.CurrentTheme);
+    }
+
+    [TestMethod]
+    public void Execute_Theme_NoArgs_ShowsCurrent()
+    {
+        _sessionState.CurrentTheme = "Dark";
+        var result = _service.Execute("/theme");
+
+        Assert.IsTrue(result.Success);
+        Assert.Contains("Current theme", result.DisplayText);
+        Assert.Contains("Dark", result.DisplayText);
+        Assert.Contains("Usage", result.DisplayText);
+    }
+
+    [TestMethod]
+    public void Execute_Theme_InvalidArg_ReturnsError()
+    {
+        var result = _service.Execute("/theme blue");
+
+        Assert.IsFalse(result.Success);
+        Assert.Contains("Invalid theme", result.DisplayText);
+        Assert.Contains("Valid values", result.DisplayText);
     }
 }

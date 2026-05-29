@@ -5,6 +5,7 @@ using QuickNET.History;
 using QuickNET.MetaCommands;
 using QuickNET.Session;
 using QuickNET.Templates;
+using QuickNET.Theme;
 
 namespace QuickNET;
 
@@ -22,6 +23,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<SessionState>();
         services.AddSingleton<MetaCommandService>();
         services.AddSingleton<AssemblyResolutionService>();
+        services.AddSingleton<ThemeService>();
         return services;
     }
 }

@@ -24,6 +24,12 @@ public class SessionState
         set { _settings.Language = value.ToString(); Save(); }
     }
 
+    public string CurrentTheme
+    {
+        get => _settings.Theme;
+        set { _settings.Theme = value; Save(); }
+    }
+
     public SessionState()
     {
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);

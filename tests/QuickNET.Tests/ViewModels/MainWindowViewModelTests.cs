@@ -4,6 +4,7 @@ using QuickNET.App.ViewModels;
 using QuickNET.History;
 using QuickNET.Models;
 using QuickNET.Session;
+using QuickNET.Theme;
 
 namespace QuickNET.Tests.ViewModels;
 
@@ -21,7 +22,9 @@ public sealed class MainWindowViewModelTests
         var tempHistoryPath = Path.Combine(_tempDir, "history.json");
         var tempSettingsPath = Path.Combine(_tempDir, "settings.json");
         services.AddSingleton(new HistoryManager(tempHistoryPath));
-        services.AddSingleton(new SessionState(tempSettingsPath));
+        var sessionState = new SessionState(tempSettingsPath);
+        services.AddSingleton(sessionState);
+        services.AddSingleton(new ThemeService(sessionState));
         services.AddSingleton<HistoryService>();
         services.AddSingleton<MainWindowViewModel>();
         _provider = services.BuildServiceProvider();
@@ -228,6 +231,7 @@ public sealed class MainWindowViewModelTests
             var tempHistoryPath = Path.Combine(tempDir, "history.json");
             services.AddSingleton(new HistoryManager(tempHistoryPath));
             services.AddSingleton(session);
+            services.AddSingleton(new ThemeService(session));
             services.AddSingleton<HistoryService>();
             services.AddSingleton<MainWindowViewModel>();
             using var provider = services.BuildServiceProvider();
@@ -240,5 +244,40 @@ public sealed class MainWindowViewModelTests
             if (Directory.Exists(tempDir))
                 Directory.Delete(tempDir, recursive: true);
         }
+    }
+
+    [TestMethod]
+    public void SessionInfoText_DefaultTheme_NoThemeLabel()
+    {
+        var vm = _provider.GetRequiredService<MainWindowViewModel>();
+
+        var info = vm.SessionInfoText;
+
+        Assert.DoesNotContain("Dark |", info);
+        Assert.DoesNotContain("Light |", info);
+    }
+
+    [TestMethod]
+    public void SessionInfoText_DarkTheme_ContainsLabel()
+    {
+        var vm = _provider.GetRequiredService<MainWindowViewModel>();
+        vm.InputText = "/theme dark";
+        vm.ExecuteCodeCommand.Execute(null);
+
+        var info = vm.SessionInfoText;
+
+        Assert.Contains("Dark |", info);
+    }
+
+    [TestMethod]
+    public void SessionInfoText_LightTheme_ContainsLabel()
+    {
+        var vm = _provider.GetRequiredService<MainWindowViewModel>();
+        vm.InputText = "/theme light";
+        vm.ExecuteCodeCommand.Execute(null);
+
+        var info = vm.SessionInfoText;
+
+        Assert.Contains("Light |", info);
     }
 }

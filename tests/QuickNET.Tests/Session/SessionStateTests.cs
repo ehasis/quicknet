@@ -241,4 +241,66 @@ public sealed class SessionStateTests
 
         Assert.IsInstanceOfType<IReadOnlyList<string>>(imports);
     }
+
+    [TestMethod]
+    public void CurrentTheme_Default_IsSystem()
+    {
+        var state = CreateSessionState();
+
+        Assert.AreEqual("System", state.CurrentTheme);
+    }
+
+    [TestMethod]
+    public void CurrentTheme_Setter_PersistsImmediately()
+    {
+        var state = CreateSessionState();
+        state.CurrentTheme = "Dark";
+
+        var json = File.ReadAllText(Path.Combine(_tempDir, "settings.json"));
+        Assert.Contains("dark", json.ToLowerInvariant());
+    }
+
+    [TestMethod]
+    public void CurrentTheme_LoadsFromExistingFile()
+    {
+        var existingSettings = new SessionSettings
+        {
+            Theme = "Light"
+        };
+        _tempDir = Path.Combine(Path.GetTempPath(), $"QuickNET_Test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempDir);
+        var tempFile = Path.Combine(_tempDir, "settings.json");
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+        File.WriteAllText(tempFile, JsonSerializer.Serialize(existingSettings, options));
+
+        var state = new SessionState(tempFile);
+
+        Assert.AreEqual("Light", state.CurrentTheme);
+    }
+
+    [TestMethod]
+    public void CurrentTheme_DeserializeMissing_DefaultsToSystem()
+    {
+        var existingSettings = new SessionSettings
+        {
+            Language = "VisualBasic"
+        };
+        _tempDir = Path.Combine(Path.GetTempPath(), $"QuickNET_Test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempDir);
+        var tempFile = Path.Combine(_tempDir, "settings.json");
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        };
+        File.WriteAllText(tempFile, JsonSerializer.Serialize(existingSettings, options));
+
+        var state = new SessionState(tempFile);
+
+        Assert.AreEqual("System", state.CurrentTheme);
+    }
 }
