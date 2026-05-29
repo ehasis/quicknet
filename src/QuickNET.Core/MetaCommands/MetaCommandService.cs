@@ -37,7 +37,7 @@ public class MetaCommandService
             "import" or "using" => ExecuteImport(args),
             "references" => ExecuteReferences(),
             "imports" => ExecuteImports(),
-            "timeout" => NotYetImplemented(command),
+            "timeout" => ExecuteTimeout(args),
             _ => new MetaCommandResult
             {
                 Command = command,
@@ -221,6 +221,41 @@ public class MetaCommandService
         {
             Command = "imports",
             DisplayText = sb.ToString().TrimEnd(),
+            Success = true
+        };
+    }
+
+    private MetaCommandResult ExecuteTimeout(string? args)
+    {
+        if (string.IsNullOrWhiteSpace(args))
+        {
+            var currentSecs = _sessionState.TimeoutSeconds;
+            var currentLabel = currentSecs == 0 ? "no limit" : $"{currentSecs}s";
+            return new MetaCommandResult
+            {
+                Command = "timeout",
+                DisplayText = $"Current timeout: {currentLabel}. Usage: /timeout <seconds> (0 = no limit)",
+                Success = true
+            };
+        }
+
+        var trimmed = args.Trim();
+        if (!int.TryParse(trimmed, out var seconds) || seconds < 0)
+        {
+            return new MetaCommandResult
+            {
+                Command = "timeout",
+                DisplayText = $"Invalid timeout value '{trimmed}'. Expected a non-negative number (0 = no limit).",
+                Success = false
+            };
+        }
+
+        _sessionState.TimeoutSeconds = seconds;
+        var label = seconds == 0 ? "no limit" : $"{seconds}s";
+        return new MetaCommandResult
+        {
+            Command = "timeout",
+            DisplayText = $"Execution timeout set to {label}.",
             Success = true
         };
     }

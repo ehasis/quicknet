@@ -40,6 +40,6 @@ public class ReplEngine
         }
 
         var executionInput = new ExecutionInput(compilationResult.AssemblyBytes!);
-        return _execution.Execute(executionInput);
+        return _execution.Execute(executionInput, _sessionState.TimeoutSeconds);
     }
 }

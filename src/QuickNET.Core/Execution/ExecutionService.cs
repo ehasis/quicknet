@@ -5,7 +5,7 @@ namespace QuickNET.Execution;
 
 public class ExecutionService
 {
-    public ExecutionResult Execute(ExecutionInput input)
+    public ExecutionResult Execute(ExecutionInput input, int timeoutSeconds = 0)
     {
         var alc = new QuickNETAssemblyLoadContext();
         string consoleOutput = "";
@@ -34,13 +34,66 @@ public class ExecutionService
             try
             {
                 Console.SetOut(stringWriter);
-                var result = method.Invoke(null, null);
 
-                if (result is System.Threading.Tasks.Task task)
+                object? result;
+                Exception? executionException = null;
+
+                if (timeoutSeconds > 0)
                 {
-                    task.GetAwaiter().GetResult();
-                    var resultProperty = task.GetType().GetProperty("Result");
-                    result = resultProperty?.GetValue(task);
+                    var timeout = TimeSpan.FromSeconds(timeoutSeconds);
+                    var task = System.Threading.Tasks.Task.Run(() => method.Invoke(null, null));
+
+                    try
+                    {
+                        if (!task.Wait(timeout))
+                        {
+                            stringWriter.Flush();
+                            consoleOutput = GetConsoleOutput(sessionType, stringWriter);
+                            return new ExecutionResult(
+                                false, null,
+                                $"Execution timed out after {timeoutSeconds} seconds.",
+                                consoleOutput);
+                        }
+                    }
+                    catch (AggregateException)
+                    {
+                        // Task faulted — handled below
+                    }
+
+                    if (task.IsFaulted)
+                    {
+                        executionException = UnwrapException(task.Exception);
+                        result = null;
+                    }
+                    else
+                        result = task.Result;
+                }
+                else
+                {
+                    try
+                    {
+                        result = method.Invoke(null, null);
+                    }
+                    catch (TargetInvocationException ex)
+                    {
+                        executionException = ex.InnerException ?? ex;
+                        result = null;
+                    }
+                }
+
+                if (executionException != null)
+                {
+                    return new ExecutionResult(
+                        false, null,
+                        $"{executionException.GetType().Name}: {executionException.Message}\n{executionException.StackTrace}",
+                        consoleOutput);
+                }
+
+                if (result is System.Threading.Tasks.Task taskResult)
+                {
+                    taskResult.GetAwaiter().GetResult();
+                    var resultProperty = taskResult.GetType().GetProperty("Result");
+                    result = resultProperty?.GetValue(taskResult);
                 }
 
                 stringWriter.Flush();
@@ -107,5 +160,21 @@ public class ExecutionService
         }
 
         return hostWriter?.ToString() ?? "";
+    }
+
+    private static Exception UnwrapException(Exception? exception)
+    {
+        if (exception is null)
+            return new Exception("Unknown error");
+
+        var unwrapped = exception;
+        while (unwrapped.InnerException is not null
+            && (unwrapped is TargetInvocationException
+                || unwrapped is AggregateException))
+        {
+            unwrapped = unwrapped.InnerException;
+        }
+
+        return unwrapped;
     }
 }

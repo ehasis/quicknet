@@ -215,12 +215,52 @@ public sealed class MetaCommandServiceTests
     }
 
     [TestMethod]
-    public void Execute_Timeout_NotYetImplemented()
+    public void Execute_Timeout_ValidValue_SetsTimeout()
     {
         var result = _service.Execute("/timeout 60");
 
+        Assert.IsTrue(result.Success);
+        Assert.AreEqual(60, _sessionState.TimeoutSeconds);
+        Assert.Contains("60s", result.DisplayText);
+    }
+
+    [TestMethod]
+    public void Execute_Timeout_Zero_SetsNoLimit()
+    {
+        var result = _service.Execute("/timeout 0");
+
+        Assert.IsTrue(result.Success);
+        Assert.AreEqual(0, _sessionState.TimeoutSeconds);
+        Assert.Contains("no limit", result.DisplayText);
+    }
+
+    [TestMethod]
+    public void Execute_Timeout_NoArgs_ShowsCurrent()
+    {
+        _sessionState.TimeoutSeconds = 30;
+        var result = _service.Execute("/timeout");
+
+        Assert.IsTrue(result.Success);
+        Assert.Contains("Current timeout", result.DisplayText);
+        Assert.Contains("30s", result.DisplayText);
+    }
+
+    [TestMethod]
+    public void Execute_Timeout_Negative_ReturnsError()
+    {
+        var result = _service.Execute("/timeout -5");
+
         Assert.IsFalse(result.Success);
-        Assert.Contains("next task", result.DisplayText);
+        Assert.Contains("Invalid", result.DisplayText);
+    }
+
+    [TestMethod]
+    public void Execute_Timeout_NonNumeric_ReturnsError()
+    {
+        var result = _service.Execute("/timeout abc");
+
+        Assert.IsFalse(result.Success);
+        Assert.Contains("Invalid", result.DisplayText);
     }
 
     [TestMethod]
