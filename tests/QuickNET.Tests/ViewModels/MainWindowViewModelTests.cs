@@ -107,4 +107,189 @@ public sealed class MainWindowViewModelTests
         Assert.AreEqual("4", vm.ConversationItems[^1].DisplayText);
         Assert.IsFalse(vm.ConversationItems[^1].IsError);
     }
+
+    [TestMethod]
+    public void ExecuteCode_MetaCommand_Help_DisplaysInConversation()
+    {
+        var vm = _provider.GetRequiredService<MainWindowViewModel>();
+        vm.InputText = "/help";
+
+        vm.ExecuteCodeCommand.Execute(null);
+
+        Assert.IsTrue(vm.ConversationItems.Count >= 2);
+        Assert.AreEqual("> /help", vm.ConversationItems[^2].DisplayText);
+        Assert.IsFalse(vm.ConversationItems[^1].IsError);
+        Assert.Contains("Available commands", vm.ConversationItems[^1].DisplayText);
+    }
+
+    [TestMethod]
+    public void ExecuteCode_MetaCommand_Clear_ClearsPanel()
+    {
+        var vm = _provider.GetRequiredService<MainWindowViewModel>();
+        vm.InputText = "2 + 2";
+        vm.ExecuteCodeCommand.Execute(null);
+        Assert.IsTrue(vm.ConversationItems.Count > 0);
+
+        vm.InputText = "/clear";
+        vm.ExecuteCodeCommand.Execute(null);
+
+        Assert.AreEqual(1, vm.ConversationItems.Count);
+        Assert.Contains("cleared", vm.ConversationItems[0].DisplayText);
+    }
+
+    [TestMethod]
+    public void ExecuteCode_MetaCommand_Lang_SyncsComboBox()
+    {
+        var vm = _provider.GetRequiredService<MainWindowViewModel>();
+        vm.SelectedLanguageIndex = 0;
+        vm.InputText = "/lang vb";
+
+        vm.ExecuteCodeCommand.Execute(null);
+
+        Assert.AreEqual(1, vm.SelectedLanguageIndex);
+    }
+
+    [TestMethod]
+    public void ExecuteCode_MetaCommand_Timeout_SyncsComboBox()
+    {
+        var vm = _provider.GetRequiredService<MainWindowViewModel>();
+        vm.SelectedTimeoutIndex = 2;
+        vm.InputText = "/timeout 5";
+
+        vm.ExecuteCodeCommand.Execute(null);
+
+        Assert.AreEqual(0, vm.SelectedTimeoutIndex);
+    }
+
+    [TestMethod]
+    public void ExecuteCode_MetaCommand_Unknown_ShowsError()
+    {
+        var vm = _provider.GetRequiredService<MainWindowViewModel>();
+        vm.InputText = "/xyz";
+
+        vm.ExecuteCodeCommand.Execute(null);
+
+        Assert.IsTrue(vm.ConversationItems.Count >= 2);
+        Assert.IsTrue(vm.ConversationItems[^1].IsError);
+        Assert.Contains("Unknown command", vm.ConversationItems[^1].DisplayText);
+    }
+
+    [TestMethod]
+    public void ComboBoxLanguage_SyncsToSessionState()
+    {
+        var vm = _provider.GetRequiredService<MainWindowViewModel>();
+        var sessionState = _provider.GetRequiredService<SessionState>();
+
+        vm.SelectedLanguageIndex = 1;
+
+        Assert.AreEqual(Language.VisualBasic, sessionState.CurrentLanguage);
+    }
+
+    [TestMethod]
+    public void ComboBoxTimeout_SyncsToSessionState()
+    {
+        var vm = _provider.GetRequiredService<MainWindowViewModel>();
+        var sessionState = _provider.GetRequiredService<SessionState>();
+
+        vm.SelectedTimeoutIndex = 0;
+
+        Assert.AreEqual(5, sessionState.TimeoutSeconds);
+    }
+
+    [TestMethod]
+    public void StatusText_AfterSuccessfulMetaCommand_IsReady()
+    {
+        var vm = _provider.GetRequiredService<MainWindowViewModel>();
+        vm.InputText = "/help";
+
+        vm.ExecuteCodeCommand.Execute(null);
+
+        Assert.AreEqual("Ready", vm.StatusText);
+    }
+
+    [TestMethod]
+    public void StatusText_AfterFailedMetaCommand_IsError()
+    {
+        var vm = _provider.GetRequiredService<MainWindowViewModel>();
+        vm.InputText = "/xyz";
+
+        vm.ExecuteCodeCommand.Execute(null);
+
+        Assert.AreEqual("Error", vm.StatusText);
+    }
+
+    [TestMethod]
+    public void SessionInfoText_ShowsTimeoutRefsImports()
+    {
+        var vm = _provider.GetRequiredService<MainWindowViewModel>();
+        var sessionState = _provider.GetRequiredService<SessionState>();
+        sessionState.AddReference("System.Text.Json");
+        sessionState.AddImport("System.Text.Json");
+
+        var info = vm.SessionInfoText;
+
+        Assert.Contains("Timeout:", info);
+        Assert.Contains("Refs: 1", info);
+        Assert.Contains("Imports: 1", info);
+    }
+
+    [TestMethod]
+    public void RestoreSessionSettings_RestoresLanguage()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"QuickNET_Test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var tempSessionPath = Path.Combine(tempDir, "settings.json");
+            var session = new SessionState(tempSessionPath);
+            session.CurrentLanguage = Language.VisualBasic;
+
+            var services = new ServiceCollection();
+            services.AddQuickNETCore();
+            var tempHistoryPath = Path.Combine(tempDir, "history.json");
+            services.AddSingleton(new HistoryManager(tempHistoryPath));
+            services.AddSingleton(session);
+            services.AddSingleton<HistoryService>();
+            services.AddSingleton<MainWindowViewModel>();
+            using var provider = services.BuildServiceProvider();
+
+            var vm = provider.GetRequiredService<MainWindowViewModel>();
+            Assert.AreEqual(1, vm.SelectedLanguageIndex);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [TestMethod]
+    public void RestoreSessionSettings_RestoresTimeout()
+    {
+        var tempDir = Path.Combine(Path.GetTempPath(), $"QuickNET_Test_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var tempSessionPath = Path.Combine(tempDir, "settings.json");
+            var session = new SessionState(tempSessionPath);
+            session.TimeoutSeconds = 10;
+
+            var services = new ServiceCollection();
+            services.AddQuickNETCore();
+            var tempHistoryPath = Path.Combine(tempDir, "history.json");
+            services.AddSingleton(new HistoryManager(tempHistoryPath));
+            services.AddSingleton(session);
+            services.AddSingleton<HistoryService>();
+            services.AddSingleton<MainWindowViewModel>();
+            using var provider = services.BuildServiceProvider();
+
+            var vm = provider.GetRequiredService<MainWindowViewModel>();
+            Assert.AreEqual(1, vm.SelectedTimeoutIndex);
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+                Directory.Delete(tempDir, recursive: true);
+        }
+    }
 }
