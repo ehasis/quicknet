@@ -173,8 +173,12 @@ public class MetaCommandService
     {
         var sb = new StringBuilder();
         sb.AppendLine("Default references:");
-        sb.AppendLine("  System.Runtime, System.Console, System.Linq, System.IO.FileSystem,");
-        sb.AppendLine("  System.Text.Encoding, System.Threading.Tasks");
+        sb.AppendLine("  System.Console");
+        sb.AppendLine("  System.IO.FileSystem");
+        sb.AppendLine("  System.Linq");
+        sb.AppendLine("  System.Runtime");
+        sb.AppendLine("  System.Text.Encoding");
+        sb.AppendLine("  System.Threading.Tasks");
         sb.AppendLine();
 
         var extraRefs = _sessionState.ExtraReferences;
@@ -201,8 +205,12 @@ public class MetaCommandService
     {
         var sb = new StringBuilder();
         sb.AppendLine("Default imports:");
-        sb.AppendLine("  System, System.Collections.Generic, System.IO, System.Linq,");
-        sb.AppendLine("  System.Text, System.Threading.Tasks");
+        sb.AppendLine("  System");
+        sb.AppendLine("  System.Collections.Generic");
+        sb.AppendLine("  System.IO");
+        sb.AppendLine("  System.Linq");
+        sb.AppendLine("  System.Text");
+        sb.AppendLine("  System.Threading.Tasks");
         sb.AppendLine();
 
         var extraImports = _sessionState.ExtraImports;
