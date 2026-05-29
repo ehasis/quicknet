@@ -1,5 +1,8 @@
+using System.Collections.Specialized;
 using Avalonia.Controls;
+using Avalonia.Controls.Documents;
 using Avalonia.Input;
+using QuickNET.App.Models;
 using QuickNET.App.ViewModels;
 
 namespace QuickNET.App.Views;
@@ -32,10 +35,33 @@ public partial class MainWindow : Window
     {
         if (DataContext is MainWindowViewModel vm)
         {
-            vm.ConversationItems.CollectionChanged += (_, _) =>
+            vm.ConversationItems.CollectionChanged += (_, args) =>
             {
+                if (args.Action == NotifyCollectionChangedAction.Reset)
+                {
+                    ConversationOutput.Inlines?.Clear();
+                    return;
+                }
+                if (args.NewItems is not null)
+                {
+                    foreach (ConversationItem item in args.NewItems)
+                        AppendItem(item);
+                }
                 ConversationScroller.ScrollToEnd();
             };
+
+            foreach (var item in vm.ConversationItems)
+                AppendItem(item);
         }
+    }
+
+    private void AppendItem(ConversationItem item)
+    {
+        ConversationOutput.Inlines!.Add(new Run
+        {
+            Text = item.DisplayText,
+            Foreground = item.Foreground
+        });
+        ConversationOutput.Inlines.Add(new LineBreak());
     }
 }

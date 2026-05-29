@@ -28,19 +28,11 @@
         <ScrollViewer Grid.Row="1"
                       x:Name="ConversationScroller"
                       AllowAutoHide="False">
-            <ItemsControl ItemsSource="{Binding ConversationItems}"
-                          Margin="8">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="models:ConversationItem">
-                        <StackPanel Margin="0,2">
-                            <TextBlock Text="{Binding DisplayText}"
-                                       Foreground="{Binding Foreground}"
-                                       FontFamily="Cascadia Code, Consolas, monospace"
-                                       FontSize="13" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <SelectableTextBlock x:Name="ConversationOutput"
+                                  FontFamily="Cascadia Code, Consolas, monospace"
+                                  FontSize="13"
+                                  TextWrapping="Wrap"
+                                  Margin="8" />
         </ScrollViewer>
 
         <Border Grid.Row="2"
