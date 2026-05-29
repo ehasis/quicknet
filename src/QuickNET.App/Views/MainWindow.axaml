@@ -48,9 +48,15 @@
                 BorderThickness="0,1,0,0"
                 Padding="8,4">
             <DockPanel>
+                <Button DockPanel.Dock="Right"
+                        Content="Run"
+                        Command="{Binding ExecuteCodeCommand}"
+                        Margin="8,0,0,0"
+                        VerticalAlignment="Top"
+                        Padding="12,4" />
                 <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal"
                             Margin="0,4,0,0">
-                    <TextBlock Text="Shift+Enter to run"
+                    <TextBlock Text="Enter to run  |  Shift+Enter for new line"
                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                FontSize="11"
                                VerticalAlignment="Center" />

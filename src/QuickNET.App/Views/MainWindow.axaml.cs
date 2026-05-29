@@ -17,7 +17,7 @@ public partial class MainWindow : Window
     {
         if (e.Key == Key.Enter)
         {
-            if (e.KeyModifiers == KeyModifiers.None || e.KeyModifiers == KeyModifiers.Shift)
+            if (e.KeyModifiers == KeyModifiers.None)
             {
                 if (DataContext is MainWindowViewModel vm)
                 {
