@@ -42,12 +42,12 @@ O **QuickNET** é uma aplicação desktop leve que funciona como um REPL (Read-E
 |---|---|---|
 | **US-01** | Como desenvolvedor, quero digitar uma expressão simples (ex.: `2 + 2`) e ver o resultado imediatamente para validar comportamentos rápidos. | - Input single-line é processado após `Enter`.<br>- Resultado exibido no painel de output em < 500ms.<br>- Erros de compilação/runtime são reportados com localização (linha, coluna) quando disponível. |
 | **US-02** | Como desenvolvedor, quero escrever blocos multi-linha (ex.: um `if` com várias instruções) para prototipar pequenos algoritmos. | - O input aceita múltiplas linhas.<br>- A submissão é feita via atalho (ex.: `Shift+Enter`).<br>- O bloco completo é compilado e executado como uma unidade. |
-| **US-03** | Como desenvolvedor, quero alternar entre C# e VB.NET para testar código em ambas as linguagens. | - ComboBox ou seletor visível na UI para escolher a linguagem ativa.<br>- A troca de linguagem não reinicia a aplicação nem perde o histórico.<br>- Cada entrada do histórico preserva a linguagem com que foi executada. |
+| **US-03** | Como desenvolvedor, quero alternar entre C# e VB.NET para testar código em ambas as linguagens. | - A troca de linguagem é feita via meta-comando `/lang cs` ou `/lang vb`.<br>- A troca de linguagem não reinicia a aplicação nem perde o histórico.<br>- Cada entrada do histórico preserva a linguagem com que foi executada. |
 | **US-04** | Como desenvolvedor, quero ver o histórico de comandos executados e seus resultados para revisitar testes anteriores. | - Histórico exibido como conversação (input → output) em painel scrollável.<br>- Histórico persiste entre sessões (armazenamento local). |
 | **US-05** | Como desenvolvedor, quero que erros sejam apresentados de forma clara para entender o que corrigir. | - Erros de compilação exibidos com mensagem do Roslyn e indicador de posição.<br>- Exceções de runtime exibidas com stack trace resumida. |
 | **US-06** | Como desenvolvedor, quero usar meta-comandos via input (`/clear`, `/help`, `/lang`, etc.) para controlar a sessão sem usar o mouse. | - Comandos iniciados com `/` são interpretados como meta-comandos e não compilados.<br>- `/clear` limpa painel e histórico.<br>- `/help` lista todos os comandos disponíveis com descrição.<br>- `/lang cs` e `/lang vb` alternam a linguagem ativa. |
 | **US-07** | Como desenvolvedor, quero adicionar referências a assemblies extras e namespaces para usar APIs que não estão no conjunto padrão. | - `/reference System.Text.Json` adiciona o assembly à compilação.<br>- `/import System.Text.Json` (alias `/using`) adiciona o namespace aos imports.<br>- `/references` lista assemblies referenciados.<br>- `/imports` lista namespaces importados.<br>- Referências e imports persistem entre execuções e entre reinicializações da aplicação. |
-| **US-08** | Como desenvolvedor, quero configurar um timeout de execução para evitar que loops infinitos travem a aplicação. | - Timeout padrão de 30s configurável via ComboBox na UI (5s / 10s / 30s / 60s / sem limite).<br>- Timeout também pode ser alterado via `/timeout <segundos>`.<br>- Execução é cancelada após o timeout com mensagem clara. |
+| **US-08** | Como desenvolvedor, quero configurar um timeout de execução para evitar que loops infinitos travem a aplicação. | - Timeout padrão de 30s.<br>- Timeout pode ser alterado via `/timeout <segundos>`.<br>- Execução é cancelada após o timeout com mensagem clara. |
 | **US-09** | Como desenvolvedor, quero que minhas configurações de sessão (referências, imports, timeout, linguagem) sejam preservadas ao fechar e reabrir a aplicação. | - Configurações salvas automaticamente em `%APPDATA%\QuickNET\settings.json`.<br>- Carregadas ao iniciar a aplicação.<br>- Arquivo corrompido não causa crash (fallback para defaults). |
 
 ### 2.3 Acceptance Criteria (Gerais)
@@ -56,11 +56,11 @@ O **QuickNET** é uma aplicação desktop leve que funciona como um REPL (Read-E
 - A instalação é feita via instalador MSI/EXE ou ZIP extraível.
 - A janela principal contém um painel scrollável de conversação (input → output) e um campo de input na parte inferior.
 - O input suporta single-line (`Enter`) e multi-linha (`Shift+Enter`).
-- A linguagem pode ser trocada via ComboBox sem perder estado da sessão.
+- A linguagem pode ser trocada via meta-comando `/lang cs` ou `/lang vb`.
 - Erros de compilação e runtime são capturados e exibidos no painel de output.
 - **v1.1:** Inputs iniciados com `/` são tratados como meta-comandos.
 - **v1.1:** Meta-comandos exibem o resultado no painel de conversação (como qualquer output).
-- **v1.1:** ComboBox de timeout visível na toolbar com opções: 5s, 10s, 30s (default), 60s, No Limit.
+- **v1.1:** A barra de status exibe linguagem ativa, timeout, referências e imports.
 - **v1.1:** Configurações de sessão (referências, imports, timeout, linguagem) persistem em `settings.json`.
 
 ### 2.4 Non-Goals (v1.1)
@@ -86,10 +86,9 @@ Os seguintes itens estão explicitamente fora do escopo da v1.1 e serão conside
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                   Avalonia UI                            │
-│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │ Conversation │  │   Language   │  │   Timeout    │   │
-│  │   Panel      │  │   Selector   │  │   Selector   │   │
-│  └─────────────┘  └──────────────┘  └──────────────┘   │
+│  ┌─────────────────────────────────────────────────────┐│
+│  │              Conversation Panel                     ││
+│  └─────────────────────────────────────────────────────┘│
 │  ┌─────────────────────────────────────────────────────┐│
 │  │                   Input Field                       ││
 │  └─────────────────────────────────────────────────────┘│
@@ -180,8 +179,6 @@ Compilação → Assembly em memória → Invoke Execute() → Exibe "4"
 ┌─────────────────────────────────────────────────────┐
 │ QuickNET                                   [_][□][×]│
 ├─────────────────────────────────────────────────────┤
-│ Lang: [C# ▼]                              [Clear]   │
-├─────────────────────────────────────────────────────┤
 │                                                      │
 │  > 2 + 2                                             │
 │  4                                                   │
@@ -197,21 +194,22 @@ Compilação → Assembly em memória → Invoke Execute() → Exibe "4"
 │  (scrollable conversation area)                      │
 │                                                      │
 ├─────────────────────────────────────────────────────┤
-│ │ Shift+Enter to run   │  C#   │ ........................... │
+│ │ Enter to run  |  Shift+Enter for new line          │
 ├─────────────────────────────────────────────────────┤
-│ Mensagens de erro e informações de status             │
+│ Ready | C# | Timeout: 30s | Refs: 0 | Imports: 0    │
 └─────────────────────────────────────────────────────┘
 ```
 
 ### 4.2 Interaction Flow
 
-1. Usuário seleciona a linguagem (C# ou VB.NET) via ComboBox.
+1. Usuário define a linguagem via `/lang cs` ou `/lang vb`.
 2. Usuário digita código no campo de input.
 3. Pressiona `Enter` (single-line) ou `Shift+Enter` (multi-line) para executar.
 4. O input aparece no painel de conversação com prefixo `>`.
 5. O resultado (ou erro) aparece logo abaixo.
 6. O campo de input é limpo e o foco retorna a ele.
 7. O histórico é salvo automaticamente em armazenamento local.
+8. Configurações de sessão (linguagem, timeout, refs, imports) são salvas automaticamente.
 
 ### 4.3 Input Modes
 
@@ -436,13 +434,14 @@ O timeout é implementado via `CancellationTokenSource`:
 - [x] Distribuição Windows (MSI/EXE + ZIP)
 - [x] Testes unitários com cobertura >= 70%
 
-#### v1.1 — "Meta & Session" 🔄
-- [ ] Meta-comandos: `/clear`, `/help`, `/reference`, `/import` (`/using`), `/references`, `/imports`, `/timeout`, `/lang`
-- [ ] Persistência de configurações de sessão (`settings.json`): referências, imports, timeout, linguagem
-- [ ] Dynamic assembly references via `/reference`
-- [ ] Dynamic namespace imports via `/import`
-- [ ] Timeout de execução configurável (ComboBox + `/timeout`)
-- [ ] Testes unitários para todas as novas features
+#### v1.1 — "Meta & Session" ✅
+- [x] Meta-comandos: `/clear`, `/help`, `/reference`, `/import` (`/using`), `/references`, `/imports`, `/timeout`, `/lang`
+- [x] Persistência de configurações de sessão (`settings.json`): referências, imports, timeout, linguagem
+- [x] Dynamic assembly references via `/reference`
+- [x] Dynamic namespace imports via `/import`
+- [x] Timeout de execução configurável via `/timeout`
+- [x] Barra de status com linguagem, timeout, refs e imports
+- [x] Testes unitários para todas as novas features
 
 #### v1.2 — "UX Avançada"
 - [ ] Autocomplete / IntelliSense (popup)

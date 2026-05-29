@@ -16,16 +16,11 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly MetaCommandService _metaCommandService;
     private readonly SessionState _sessionState;
 
-    private static readonly int[] TimeoutOptions = [5, 10, 30, 60, 0];
-
     [ObservableProperty]
     private string _inputText = "";
 
     [ObservableProperty]
     private int _selectedLanguageIndex = 0;
-
-    [ObservableProperty]
-    private int _selectedTimeoutIndex = 2;
 
     [ObservableProperty]
     private string _statusText = "Ready";
@@ -40,31 +35,8 @@ public partial class MainWindowViewModel : ObservableObject
         _metaCommandService = metaCommandService;
         _sessionState = sessionState;
         LoadHistory();
-        RestoreSessionSettings();
-    }
 
-    private void RestoreSessionSettings()
-    {
-        SelectedLanguageIndex = _sessionState.CurrentLanguage == Language.CSharp ? 0 : 1;
-        var timeoutIndex = Array.IndexOf(TimeoutOptions, _sessionState.TimeoutSeconds);
-        SelectedTimeoutIndex = timeoutIndex >= 0 ? timeoutIndex : 2;
-    }
-
-    partial void OnSelectedLanguageIndexChanged(int value)
-    {
-        var newLang = value == 0 ? Language.CSharp : Language.VisualBasic;
-        if (_sessionState.CurrentLanguage != newLang)
-            _sessionState.CurrentLanguage = newLang;
-    }
-
-    partial void OnSelectedTimeoutIndexChanged(int value)
-    {
-        if (value >= 0 && value < TimeoutOptions.Length)
-        {
-            var newTimeout = TimeoutOptions[value];
-            if (_sessionState.TimeoutSeconds != newTimeout)
-                _sessionState.TimeoutSeconds = newTimeout;
-        }
+        _selectedLanguageIndex = _sessionState.CurrentLanguage == Language.CSharp ? 0 : 1;
     }
 
     private void LoadHistory()
@@ -160,13 +132,6 @@ public partial class MainWindowViewModel : ObservableObject
             SelectedLanguageIndex = _sessionState.CurrentLanguage == Language.CSharp ? 0 : 1;
         }
 
-        if (result.Command == "timeout" && result.Success)
-        {
-            var idx = Array.IndexOf(TimeoutOptions, _sessionState.TimeoutSeconds);
-            if (idx >= 0)
-                SelectedTimeoutIndex = idx;
-        }
-
         OnPropertyChanged(nameof(SessionInfoText));
 
         ConversationItems.Add(new ConversationItem
@@ -191,8 +156,9 @@ public partial class MainWindowViewModel : ObservableObject
     {
         get
         {
+            var lang = _sessionState.CurrentLanguage == Language.CSharp ? "C#" : "VB";
             var timeoutLabel = _sessionState.TimeoutSeconds == 0 ? "No Limit" : $"{_sessionState.TimeoutSeconds}s";
-            return $"Timeout: {timeoutLabel} | Refs: {_sessionState.ExtraReferences.Count} | Imports: {_sessionState.ExtraImports.Count}";
+            return $"{lang} | Timeout: {timeoutLabel} | Refs: {_sessionState.ExtraReferences.Count} | Imports: {_sessionState.ExtraImports.Count}";
         }
     }
 }

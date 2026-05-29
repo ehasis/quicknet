@@ -138,7 +138,7 @@ public sealed class MainWindowViewModelTests
     }
 
     [TestMethod]
-    public void ExecuteCode_MetaCommand_Lang_SyncsComboBox()
+    public void ExecuteCode_MetaCommand_Lang_UpdatesLanguage()
     {
         var vm = _provider.GetRequiredService<MainWindowViewModel>();
         vm.SelectedLanguageIndex = 0;
@@ -150,15 +150,15 @@ public sealed class MainWindowViewModelTests
     }
 
     [TestMethod]
-    public void ExecuteCode_MetaCommand_Timeout_SyncsComboBox()
+    public void ExecuteCode_MetaCommand_Lang_SyncsToSessionState()
     {
         var vm = _provider.GetRequiredService<MainWindowViewModel>();
-        vm.SelectedTimeoutIndex = 2;
-        vm.InputText = "/timeout 5";
+        var sessionState = _provider.GetRequiredService<SessionState>();
+        vm.InputText = "/lang vb";
 
         vm.ExecuteCodeCommand.Execute(null);
 
-        Assert.AreEqual(0, vm.SelectedTimeoutIndex);
+        Assert.AreEqual(Language.VisualBasic, sessionState.CurrentLanguage);
     }
 
     [TestMethod]
@@ -172,28 +172,6 @@ public sealed class MainWindowViewModelTests
         Assert.IsTrue(vm.ConversationItems.Count >= 2);
         Assert.IsTrue(vm.ConversationItems[^1].IsError);
         Assert.Contains("Unknown command", vm.ConversationItems[^1].DisplayText);
-    }
-
-    [TestMethod]
-    public void ComboBoxLanguage_SyncsToSessionState()
-    {
-        var vm = _provider.GetRequiredService<MainWindowViewModel>();
-        var sessionState = _provider.GetRequiredService<SessionState>();
-
-        vm.SelectedLanguageIndex = 1;
-
-        Assert.AreEqual(Language.VisualBasic, sessionState.CurrentLanguage);
-    }
-
-    [TestMethod]
-    public void ComboBoxTimeout_SyncsToSessionState()
-    {
-        var vm = _provider.GetRequiredService<MainWindowViewModel>();
-        var sessionState = _provider.GetRequiredService<SessionState>();
-
-        vm.SelectedTimeoutIndex = 0;
-
-        Assert.AreEqual(5, sessionState.TimeoutSeconds);
     }
 
     [TestMethod]
@@ -219,7 +197,7 @@ public sealed class MainWindowViewModelTests
     }
 
     [TestMethod]
-    public void SessionInfoText_ShowsTimeoutRefsImports()
+    public void SessionInfoText_ShowsLanguageTimeoutRefsImports()
     {
         var vm = _provider.GetRequiredService<MainWindowViewModel>();
         var sessionState = _provider.GetRequiredService<SessionState>();
@@ -228,6 +206,7 @@ public sealed class MainWindowViewModelTests
 
         var info = vm.SessionInfoText;
 
+        Assert.Contains("C#", info);
         Assert.Contains("Timeout:", info);
         Assert.Contains("Refs: 1", info);
         Assert.Contains("Imports: 1", info);
@@ -255,36 +234,6 @@ public sealed class MainWindowViewModelTests
 
             var vm = provider.GetRequiredService<MainWindowViewModel>();
             Assert.AreEqual(1, vm.SelectedLanguageIndex);
-        }
-        finally
-        {
-            if (Directory.Exists(tempDir))
-                Directory.Delete(tempDir, recursive: true);
-        }
-    }
-
-    [TestMethod]
-    public void RestoreSessionSettings_RestoresTimeout()
-    {
-        var tempDir = Path.Combine(Path.GetTempPath(), $"QuickNET_Test_{Guid.NewGuid():N}");
-        Directory.CreateDirectory(tempDir);
-        try
-        {
-            var tempSessionPath = Path.Combine(tempDir, "settings.json");
-            var session = new SessionState(tempSessionPath);
-            session.TimeoutSeconds = 10;
-
-            var services = new ServiceCollection();
-            services.AddQuickNETCore();
-            var tempHistoryPath = Path.Combine(tempDir, "history.json");
-            services.AddSingleton(new HistoryManager(tempHistoryPath));
-            services.AddSingleton(session);
-            services.AddSingleton<HistoryService>();
-            services.AddSingleton<MainWindowViewModel>();
-            using var provider = services.BuildServiceProvider();
-
-            var vm = provider.GetRequiredService<MainWindowViewModel>();
-            Assert.AreEqual(1, vm.SelectedTimeoutIndex);
         }
         finally
         {

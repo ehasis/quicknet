@@ -2,6 +2,7 @@ using System.Collections.Specialized;
 using Avalonia.Controls;
 using Avalonia.Controls.Documents;
 using Avalonia.Input;
+using Avalonia.Threading;
 using QuickNET.App.Models;
 using QuickNET.App.ViewModels;
 
@@ -52,6 +53,11 @@ public partial class MainWindow : Window
 
             foreach (var item in vm.ConversationItems)
                 AppendItem(item);
+
+            Dispatcher.UIThread.InvokeAsync(ConversationScroller.ScrollToEnd,
+                DispatcherPriority.Background);
+            Dispatcher.UIThread.InvokeAsync(() => InputBox.Focus(),
+                DispatcherPriority.Background);
         }
     }
 
