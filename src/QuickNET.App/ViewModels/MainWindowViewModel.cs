@@ -60,11 +60,12 @@ public partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void ExecuteCode()
     {
-        if (string.IsNullOrWhiteSpace(InputText)) return;
+        var input = InputText.TrimEnd('\r', '\n', ' ');
+        if (string.IsNullOrWhiteSpace(input)) return;
 
-        if (MetaCommandParser.IsMetaCommand(InputText))
+        if (MetaCommandParser.IsMetaCommand(input))
         {
-            ExecuteMetaCommand(InputText);
+            ExecuteMetaCommand(input);
             InputText = "";
             return;
         }
@@ -74,14 +75,13 @@ public partial class MainWindowViewModel : ObservableObject
 
         StatusText = $"Running ({langLabel})...";
 
-        var inputLines = InputText.TrimEnd();
         ConversationItems.Add(new ConversationItem
         {
-            DisplayText = $"> {inputLines}",
+            DisplayText = $"> {input}",
             IsInput = true
         });
 
-        var result = _engine.Execute(InputText, language);
+        var result = _engine.Execute(input, language);
 
         string outputText;
         if (result.Success)
@@ -105,7 +105,7 @@ public partial class MainWindowViewModel : ObservableObject
             IsError = !result.Success
         });
 
-        _history.Record(inputLines, langLabel, outputText, !result.Success);
+        _history.Record(input, langLabel, outputText, !result.Success);
 
         InputText = "";
         StatusText = result.Success ? "Ready" : "Error";
