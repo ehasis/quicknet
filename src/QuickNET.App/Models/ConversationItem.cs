@@ -7,5 +7,5 @@ public class ConversationItem
     public string DisplayText { get; set; } = "";
     public bool IsInput { get; set; }
     public bool IsError { get; set; }
-    public IBrush Foreground => IsInput ? Brushes.Gray : IsError ? Brushes.OrangeRed : Brushes.White;
+    public IBrush Foreground => IsInput ? Brushes.DarkGray : IsError ? Brushes.OrangeRed : Brushes.LightGray;
 }
