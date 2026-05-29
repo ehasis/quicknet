@@ -92,4 +92,22 @@ public class CompilationServiceTests
         var compilationService = provider.GetService<CompilationService>();
         Assert.IsNotNull(compilationService);
     }
+
+    [TestMethod]
+    public void Compile_ComplexExpression_ReturnsSuccess()
+    {
+        var result = _service.Compile(new CompilationInput("System.Linq.Enumerable.Range(1,5).Sum()", Language.CSharp));
+
+        Assert.IsTrue(result.Success);
+        Assert.IsNotNull(result.AssemblyBytes);
+    }
+
+    [TestMethod]
+    public void Compile_ConsoleWriteLine_ReturnsSuccess()
+    {
+        var result = _service.Compile(new CompilationInput("Console.WriteLine(\"test\");", Language.CSharp));
+
+        Assert.IsTrue(result.Success);
+        Assert.IsNotNull(result.AssemblyBytes);
+    }
 }

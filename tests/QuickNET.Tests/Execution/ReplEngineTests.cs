@@ -104,4 +104,16 @@ public class ReplEngineTests
         Assert.IsTrue(result.Success);
         Assert.AreEqual("100", result.Output);
     }
+
+    [TestMethod]
+    public void Execute_BothLanguages_Alternate()
+    {
+        var csharpResult = _engine.Execute("2 + 2", Language.CSharp);
+        Assert.IsTrue(csharpResult.Success);
+        Assert.AreEqual("4", csharpResult.Output);
+
+        var vbResult = _engine.Execute("2 + 2", Language.VisualBasic);
+        Assert.IsTrue(vbResult.Success);
+        Assert.AreEqual("4", vbResult.Output);
+    }
 }
