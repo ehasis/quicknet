@@ -84,22 +84,22 @@ Os seguintes itens estão explicitamente fora do escopo da v1.1 e serão conside
 ### 3.1 Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                   Avalonia UI                            │
-│  ┌─────────────────────────────────────────────────────┐│
-│  │              Conversation Panel                     ││
-│  └─────────────────────────────────────────────────────┘│
-│  ┌─────────────────────────────────────────────────────┐│
-│  │                   Input Field                       ││
-│  └─────────────────────────────────────────────────────┘│
-└──────────────────────┬──────────────────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│                   Avalonia UI                          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │              Conversation Panel                  │  │
+│  └──────────────────────────────────────────────────┘  │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │                   Input Field                    │  │
+│  └──────────────────────────────────────────────────┘  │
+└──────────────────────┬─────────────────────────────────┘
                        │
-┌──────────────────────▼──────────────────────────────────┐
-│                 Core Engine (v1.1)                        │
-│  ┌────────────┐  ┌──────────────┐  ┌────────────────┐  │
-│  │ MetaCmd    │  │  Compiler    │  │   Executor     │  │
-│  │ Parser     │  │  (Roslyn)    │  │                │  │
-│  └────────────┘  └──────────────┘  └────────────────┘  │
+┌──────────────────────v─────────────────────────────────┐
+│                 Core Engine (v1.1)                     │
+│  ┌──────────────┐  ┌─────────────┐  ┌───────────────┐  │
+│  │ MetaCmd      │  │  Compiler   │  │   Executor    │  │
+│  │ Parser       │  │  (Roslyn)   │  │               │  │
+│  └──────────────┘  └─────────────┘  └───────────────┘  │
 │  ┌──────────────┐  ┌─────────────┐  ┌───────────────┐  │
 │  │ SessionState │  │ Assembly    │  │ Timeout       │  │
 │  │ (persisted)  │  │ Resolver    │  │ Manager       │  │
@@ -108,7 +108,7 @@ Os seguintes itens estão explicitamente fora do escopo da v1.1 e serão conside
 │  │  History     │  │  Settings   │                     │
 │  │  Manager     │  │  Manager    │                     │
 │  └──────────────┘  └─────────────┘                     │
-└─────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────┘
 ```
 
 ### 3.2 Technology Stack
@@ -179,22 +179,22 @@ Compilação → Assembly em memória → Invoke Execute() → Exibe "4"
 ┌─────────────────────────────────────────────────────┐
 │ QuickNET                                   [_][□][×]│
 ├─────────────────────────────────────────────────────┤
-│                                                      │
-│  > 2 + 2                                             │
-│  4                                                   │
-│                                                      │
-│  > File.ReadAllText(@"C:\test.txt")                  │
-│  "Hello, World!"                                     │
-│                                                      │
-│  > var x = 10;                                       │
-│  > var y = x * 3;                                    │
-│  > y                                                 │
-│  30                                                  │
-│                                                      │
-│  (scrollable conversation area)                      │
-│                                                      │
+│                                                     │
+│  > 2 + 2                                            │
+│  4                                                  │
+│                                                     │
+│  > File.ReadAllText(@"C:\test.txt")                 │
+│  "Hello, World!"                                    │
+│                                                     │
+│  > var x = 10;                                      │
+│  > var y = x * 3;                                   │
+│  > y                                                │
+│  30                                                 │
+│                                                     │
+│  (scrollable conversation area)                     │
+│                                                     │
 ├─────────────────────────────────────────────────────┤
-│ │ Enter to run  |  Shift+Enter for new line          │
+│ │ Enter to run  |  Shift+Enter for new line         │
 ├─────────────────────────────────────────────────────┤
 │ Ready | C# | Timeout: 30s | Refs: 0 | Imports: 0    │
 └─────────────────────────────────────────────────────┘
@@ -238,44 +238,44 @@ Input do Usuário
        │
        ├── Começa com "/"?
        │      │
-       │      ▼
+       │      v
        │   ┌──────────────────┐
        │   │ MetaCmdParser    │  Detecta comando e argumentos
        │   └──────┬───────────┘
-       │          ▼
+       │          v
        │   ┌──────────────────┐
        │   │ MetaCmdService   │  Executa comando contra SessionState
        │   └──────┬───────────┘
-       │          ▼
+       │          v
        │   ┌──────────────────┐
        │   │ Display Result   │  Exibe no painel de conversação
        │   └──────────────────┘
        │
        └── Não começa com "/"
               │
-              ▼
+              v
+       ┌────────────────────┐
+       │ 1. Compile         │  Roslyn compila com refs extras + imports extras
+       │ (via Compilation   │  (vindos do SessionState)
+       │  Service)          │
+       └──────┬─────────────┘
+              v
+       ┌────────────────────┐    ┌──────────────────┐
+       │ 2. Execute         │───>│ Sucesso: captura │
+       │ (via Execution     │    │ resultado +      │
+       │  Service +         │    │ ConsoleOutput    │
+       │  CancellationToken)│    └──────────────────┘
+       └──────┬─────────────┘    ┌──────────────────┐
+              │                  │ Timeout: exibe   │
+              └─────────────────>│ erro formatado   │
+                                 └──────────────────┘
+                                 ┌──────────────────┐
+                                 │ Falha: exibe     │
+                                 │ erro formatado   │
+                                 └──────────────────┘
+              v
        ┌──────────────────┐
-       │  1. Compile      │  Roslyn compila com refs extras + imports extras
-       │  (via Compilation │  (vindos do SessionState)
-       │   Service)        │
-       └──────┬───────────┘
-              ▼
-       ┌──────────────────┐     ┌──────────────────┐
-       │  2. Execute       │────▶│ Sucesso: captura  │
-       │  (via Execution   │     │ resultado +       │
-       │   Service +       │     │ ConsoleOutput     │
-       │   CancellationToken)    └──────────────────┘
-       └──────┬───────────┘     ┌──────────────────┐
-              │                 │ Timeout: exibe     │
-              └────────────────▶│ erro formatado     │
-                                └──────────────────┘
-                                ┌──────────────────┐
-                                │ Falha: exibe       │
-                                │ erro formatado     │
-                                └──────────────────┘
-              ▼
-       ┌──────────────────┐
-       │  3. Display       │  Formata resultado (ToString / JSON / exception)
+       │  3. Display      │  Formata resultado (ToString / JSON / exception)
        └──────────────────┘
 ```
 
@@ -297,17 +297,17 @@ Input do Usuário
        │
        ├── Começa com "/"?
        │      │
-       │      ▼
+       │      v
        │   MetaCommandParser.Parse(input)
        │      │
-       │      ▼
+       │      v
        │   MetaCommandService.Execute(command, args, sessionState)
        │      │
-       │      └──▶ Exibe resultado no painel (não compila)
+       │      └──> Exibe resultado no painel (não compila)
        │
        └── Não começa com "/"
               │
-              ▼
+              v
            Compilação + Execução normal (usa sessionState para refs/imports/timeout)
 ```
 
