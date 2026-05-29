@@ -114,7 +114,8 @@ O QuickNET usará **compilação completa do Roslyn** (não scripting API):
 2. **Referências**: Um conjunto padrão de assemblies é referenciado (`System.dll`, `System.Core.dll`, `System.IO.dll`, `System.Linq.dll`, etc.).
 3. **Compilação em memória**: O assembly é compilado em memória (sem arquivos .dll físicos).
 4. **Isolamento via AssemblyLoadContext**: Cada execução utiliza um `AssemblyLoadContext` isolado e descartável, evitando vazamentos de memória e permitindo que assemblies sejam descarregados após o uso.
-5. **Execução via Reflection**: O método gerado é invocado e o resultado é capturado e serializado para exibição.
+5. **Execução via Reflection**: O método gerado é invocado e o resultado é capturado e serializado para exibição.  
+   **Nota:** A captura de `Console.WriteLine` deve ser feita **dentro** do template gerado (com `Console.SetOut` no próprio método `Execute()`), e não no processo host. O `AssemblyLoadContext` isola a identidade de tipos; o `System.Console` do host não é o mesmo `System.Console` do assembly carregado, mesmo com `Load(AssemblyName)` retornando `null`.
 
 ```
 Usuário digita:  2 + 2

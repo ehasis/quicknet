@@ -178,7 +178,7 @@ services.AddSingleton<ReplEngine>();
 
 - O `AssemblyLoadContext` com `isCollectible: true` é essencial. Sem ele, cada execução acumularia assemblies em memória.
 - O `Unload()` não é imediato — o GC precisa de múltiplas coletas para realmente liberar. As 3 iterações de `GC.Collect()` + `GC.WaitForPendingFinalizers()` são a prática recomendada.
-- Para `Console.SetOut`, guardar a referência original com `var originalOut = Console.Out` e restaurar depois com `Console.SetOut(originalOut)`.
+- **IMPORTANTE:** `Console.SetOut` do host **não funciona** para capturar `Console.WriteLine` de código rodando dentro do `AssemblyLoadContext`. A identidade do tipo `System.Console` difere entre o host e o ALC isolado. A captura deve ser feita **dentro do template gerado** — o método `Execute()` no código template faz seu próprio `Console.SetOut` para um `StringWriter` local, envolve o código do usuário em `try/finally`, e expõe o resultado num campo estático (`__ConsoleOutput`) que o host lê via reflection.
 - O tratamento de `Task`/`Task<T>` é necessário porque o usuário pode escrever `await SomethingAsync()` — como o método `Execute()` é síncrono, o Roslyn compilará, mas o retorno será um `Task`. Usar pattern:
 
 ```csharp

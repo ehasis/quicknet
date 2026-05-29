@@ -16,10 +16,20 @@ public class VbTemplateEngine : ITemplateEngine
         Imports System.Threading.Tasks
 
         Public Module QuickNETSession
+            Public __ConsoleOutput As String
+
             Public Function Execute() As Object
+                Dim __sw As New StringWriter()
+                Dim __originalOut = Console.Out
+                Console.SetOut(__sw)
+                Try
         """;
 
     private const string Footer = """
+                Finally
+                    Console.SetOut(__originalOut)
+                    __ConsoleOutput = __sw.ToString()
+                End Try
             End Function
         End Module
         """;
@@ -33,13 +43,18 @@ public class VbTemplateEngine : ITemplateEngine
 
         if (IsExpression(trimmed))
         {
-            sb.AppendLine($"        Return {trimmed}");
+            sb.AppendLine($"            Return {trimmed}");
         }
         else
         {
             foreach (var line in trimmed.Split('\n'))
             {
-                sb.AppendLine($"        {line.TrimEnd('\r')}");
+                sb.AppendLine($"            {line.TrimEnd('\r')}");
+            }
+
+            if (!trimmed.Contains("Return ", StringComparison.OrdinalIgnoreCase))
+            {
+                sb.AppendLine("            Return Nothing");
             }
         }
 

@@ -12,7 +12,7 @@ public class CompilationService
 {
     private readonly Dictionary<Language, ITemplateEngine> _engines;
 
-    private static readonly List<MetadataReference> References = new()
+    private static readonly List<PortableExecutableReference> References = new()
     {
         MetadataReference.CreateFromFile(typeof(object).Assembly.Location),
         MetadataReference.CreateFromFile(typeof(Console).Assembly.Location),
@@ -21,6 +21,7 @@ public class CompilationService
         MetadataReference.CreateFromFile(typeof(System.Text.Encoding).Assembly.Location),
         MetadataReference.CreateFromFile(typeof(System.Threading.Tasks.Task).Assembly.Location),
         MetadataReference.CreateFromFile(typeof(Microsoft.VisualBasic.Constants).Assembly.Location),
+        MetadataReference.CreateFromFile(Assembly.Load("System.Runtime").Location),
     };
 
     public CompilationService(IEnumerable<ITemplateEngine> engines)
@@ -55,7 +56,7 @@ public class CompilationService
 
     private CompilationResult CompileCSharp(SourceText sourceText)
     {
-        const int lineOffset = 11;
+        const int lineOffset = 18;
 
         var syntaxTree = CSharpSyntaxTree.ParseText(sourceText);
         var compilation = CSharpCompilation.Create(
@@ -82,7 +83,7 @@ public class CompilationService
 
     private CompilationResult CompileVisualBasic(SourceText sourceText)
     {
-        const int lineOffset = 9;
+        const int lineOffset = 15;
 
         var syntaxTree = VisualBasicSyntaxTree.ParseText(sourceText);
         var compilation = VisualBasicCompilation.Create(

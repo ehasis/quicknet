@@ -17,11 +17,24 @@ public class CSharpTemplateEngine : ITemplateEngine
 
         public static class QuickNETSession
         {
+            public static string __ConsoleOutput;
+
             public static object Execute()
             {
+                var __sw = new StringWriter();
+                var __originalOut = Console.Out;
+                Console.SetOut(__sw);
+                try
+                {
         """;
 
     private const string Footer = """
+                }
+                finally
+                {
+                    Console.SetOut(__originalOut);
+                    __ConsoleOutput = __sw.ToString();
+                }
             }
         }
         """;
@@ -35,13 +48,18 @@ public class CSharpTemplateEngine : ITemplateEngine
 
         if (IsExpression(trimmed))
         {
-            sb.AppendLine($"        return {trimmed};");
+            sb.AppendLine($"            return {trimmed};");
         }
         else
         {
             foreach (var line in trimmed.Split('\n'))
             {
-                sb.AppendLine($"        {line.TrimEnd('\r')}");
+                sb.AppendLine($"            {line.TrimEnd('\r')}");
+            }
+
+            if (!trimmed.Contains("return ", StringComparison.Ordinal))
+            {
+                sb.AppendLine("            return null;");
             }
         }
 
