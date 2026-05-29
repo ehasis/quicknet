@@ -1,6 +1,6 @@
 # QuickNET — Product Requirements Document
 
-> **Versão:** 1.1 — Meta & Session  
+> **Versão:** 1.2 — UX Avançada  
 > **Data:** 2026-05-29  
 > **Status:** Draft
 
@@ -23,6 +23,9 @@ O **QuickNET** é uma aplicação desktop leve que funciona como um REPL (Read-E
 - **K3:** Suporte a alternância entre C# e VB.NET sem reiniciar a aplicação.
 - **K4:** Cobertura de testes unitários >= 70% nos módulos core (compilação, execução, parsing).
 - **K5:** Meta-comandos (`/clear`, `/help`, `/reference`, `/import`, `/references`, `/imports`, `/timeout`, `/lang`) funcionam via input text sem interferir na execução normal de código.
+- **K6:** Alternância de temas (claro/escuro/alto contraste) em tempo real sem reinicialização, com detecção automática do tema do sistema operacional.
+- **K7:** Autocomplete via Roslyn CompletionService com debounce de 300ms, ativado automaticamente após `.` ou 3+ caracteres, e manualmente via `Ctrl+Space`.
+- **K8:** Navegação de histórico de inputs via setas ↑↓ (últimos 50 inputs), com preservação do rascunho atual durante a navegação.
 
 ---
 
@@ -49,6 +52,9 @@ O **QuickNET** é uma aplicação desktop leve que funciona como um REPL (Read-E
 | **US-07** | Como desenvolvedor, quero adicionar referências a assemblies extras e namespaces para usar APIs que não estão no conjunto padrão. | - `/reference System.Text.Json` adiciona o assembly à compilação.<br>- `/import System.Text.Json` (alias `/using`) adiciona o namespace aos imports.<br>- `/references` lista assemblies referenciados.<br>- `/imports` lista namespaces importados.<br>- Referências e imports persistem entre execuções e entre reinicializações da aplicação. |
 | **US-08** | Como desenvolvedor, quero configurar um timeout de execução para evitar que loops infinitos travem a aplicação. | - Timeout padrão de 30s.<br>- Timeout pode ser alterado via `/timeout <segundos>`.<br>- Execução é cancelada após o timeout com mensagem clara. |
 | **US-09** | Como desenvolvedor, quero que minhas configurações de sessão (referências, imports, timeout, linguagem) sejam preservadas ao fechar e reabrir a aplicação. | - Configurações salvas automaticamente em `%APPDATA%\QuickNET\settings.json`.<br>- Carregadas ao iniciar a aplicação.<br>- Arquivo corrompido não causa crash (fallback para defaults). |
+| **US-10** | Como desenvolvedor, quero alternar entre tema claro, escuro e alto contraste para adequar a interface ao meu ambiente e preferência. | - `/theme light`, `/theme dark`, `/theme system` alternam o tema.<br>- Por padrão, o tema segue o sistema operacional.<br>- A troca é imediata (hot-reload) sem reiniciar a aplicação.<br>- A preferência de tema persiste entre sessões. |
+| **US-11** | Como desenvolvedor, quero autocomplete de código enquanto digito para acelerar a escrita de APIs e reduzir erros de digitação. | - Popup flutuante aparece automaticamente após `.` ou após 3+ caracteres com debounce de 300ms.<br>- Também ativável manualmente via `Ctrl+Space`.<br>- Sugestões incluem keywords da linguagem ativa e membros de tipos dos assemblies referenciados.<br>- Navegação por setas ↑↓ e Enter para selecionar, Escape para fechar.<br>- Funciona para C# e VB.NET conforme a linguagem ativa. |
+| **US-12** | Como desenvolvedor, quero navegar pelo histórico de comandos já executados para reexecutar ou editar inputs anteriores. | - Seta ↑ navega para inputs mais antigos (até 50 entradas).<br>- Seta ↓ navega para inputs mais recentes.<br>- O rascunho atual (se houver) é preservado ao navegar e restaurado ao voltar.<br>- Histórico de inputs persiste entre sessões.<br>- Funciona mesmo com input vazio (começa do mais recente). |
 
 ### 2.3 Acceptance Criteria (Gerais)
 
@@ -62,13 +68,16 @@ O **QuickNET** é uma aplicação desktop leve que funciona como um REPL (Read-E
 - **v1.1:** Meta-comandos exibem o resultado no painel de conversação (como qualquer output).
 - **v1.1:** A barra de status exibe linguagem ativa, timeout, referências e imports.
 - **v1.1:** Configurações de sessão (referências, imports, timeout, linguagem) persistem em `settings.json`.
+- **v1.2:** Temas (claro, escuro, alto contraste) alternáveis via `/theme` com hot-reload e detecção do SO.
+- **v1.2:** Autocomplete popup flutuante com Roslyn CompletionService (keywords + membros), debounce 300ms, ativação automática e manual (`Ctrl+Space`).
+- **v1.2:** Navegação de histórico de inputs via setas ↑↓ (50 entradas) com preservação de rascunho.
 
-### 2.4 Non-Goals (v1.1)
+### 2.4 Non-Goals (v1.2)
 
-Os seguintes itens estão explicitamente fora do escopo da v1.1 e serão considerados para versões futuras:
+Os seguintes itens estão explicitamente fora do escopo da v1.2 e serão considerados para versões futuras:
 
-- **Autocomplete / IntelliSense** — popup de sugestões durante a digitação.
-- **Syntax highlighting** — fora do escopo; será introduzido de forma básica a partir da v1.2.
+- **Autocomplete / IntelliSense** — popup de sugestões durante a digitação. ✅ Implementado na v1.2.
+- **Syntax highlighting** — colorização de código no input/output. Adiado para v3.0.
 - **Compartilhamento de contexto entre execuções** — cada input é compilado e executado isoladamente (sem estado persistente de variáveis entre linhas). Referências e imports são a única exceção.
 - **Modo CLI / Terminal** — adiado para v3.0.
 - **Suporte a Linux e macOS** — Windows apenas na v1.x.
@@ -76,6 +85,7 @@ Os seguintes itens estão explicitamente fora do escopo da v1.1 e serão conside
 - **Suporte a scripts (.csx / .vbx)** para carregamento externo.
 - **NuGet package import on-the-fly** — adiado para v2.0.
 - **`/load` e `/reset`** — dispensados por baixa prioridade.
+- **Snippets / templates de código** — expansão de atalhos (ex.: `prop` → property).
 
 ---
 
@@ -95,7 +105,7 @@ Os seguintes itens estão explicitamente fora do escopo da v1.1 e serão conside
 └──────────────────────┬─────────────────────────────────┘
                        │
 ┌──────────────────────v─────────────────────────────────┐
-│                 Core Engine (v1.1)                     │
+│                 Core Engine (v1.2)                     │
 │  ┌──────────────┐  ┌─────────────┐  ┌───────────────┐  │
 │  │ MetaCmd      │  │  Compiler   │  │   Executor    │  │
 │  │ Parser       │  │  (Roslyn)   │  │               │  │
@@ -104,9 +114,14 @@ Os seguintes itens estão explicitamente fora do escopo da v1.1 e serão conside
 │  │ SessionState │  │ Assembly    │  │ Timeout       │  │
 │  │ (persisted)  │  │ Resolver    │  │ Manager       │  │
 │  └──────────────┘  └─────────────┘  └───────────────┘  │
+│  ┌──────────────┐  ┌─────────────┐  ┌───────────────┐  │
+│  │  History     │  │  Settings   │  │ Theme         │  │
+│  │  Manager     │  │  Manager    │  │ Service       │  │
+│  └──────────────┘  └─────────────┘  └───────────────┘  │
 │  ┌──────────────┐  ┌─────────────┐                     │
-│  │  History     │  │  Settings   │                     │
-│  │  Manager     │  │  Manager    │                     │
+│  │ Completion   │  │ Input       │                     │
+│  │ Engine       │  │ History     │                     │
+│  │ (Roslyn)     │  │ (Ring)      │                     │
 │  └──────────────┘  └─────────────┘                     │
 └────────────────────────────────────────────────────────┘
 ```
@@ -203,13 +218,16 @@ Compilação → Assembly em memória → Invoke Execute() → Exibe "4"
 ### 4.2 Interaction Flow
 
 1. Usuário define a linguagem via `/lang cs` ou `/lang vb`.
-2. Usuário digita código no campo de input.
-3. Pressiona `Enter` (single-line) ou `Shift+Enter` (multi-line) para executar.
-4. O input aparece no painel de conversação com prefixo `>`.
-5. O resultado (ou erro) aparece logo abaixo.
-6. O campo de input é limpo e o foco retorna a ele.
-7. O histórico é salvo automaticamente em armazenamento local.
-8. Configurações de sessão (linguagem, timeout, refs, imports) são salvas automaticamente.
+2. Usuário define o tema via `/theme light`, `/theme dark` ou `/theme system` (padrão: system).
+3. Usuário digita código no campo de input.
+   - **v1.2:** Autocomplete popup aparece automaticamente após `.` ou 3+ caracteres (debounce 300ms), ou manualmente via `Ctrl+Space`.
+4. Pressiona `Enter` (single-line) ou `Shift+Enter` (multi-line) para executar.
+   - **v1.2:** Seta ↑/↓ navega pelo histórico de inputs (últimos 50) sem submeter.
+5. O input aparece no painel de conversação com prefixo `>`.
+6. O resultado (ou erro) aparece logo abaixo.
+7. O campo de input é limpo e o foco retorna a ele.
+8. O histórico é salvo automaticamente em armazenamento local.
+9. Configurações de sessão (linguagem, timeout, refs, imports, tema) são salvas automaticamente.
 
 ### 4.3 Input Modes
 
@@ -323,11 +341,14 @@ Input do Usuário
 | `/imports` | — | Lista os namespaces atualmente importados (padrão + extras) | `/imports` |
 | `/timeout` | — | Define o timeout de execução em segundos (0 = sem limite) | `/timeout 60` |
 | `/lang` | — | Alterna a linguagem ativa: `cs` (C#) ou `vb` (VB.NET) | `/lang vb` |
+| `/theme` | — | Alterna o tema: `light`, `dark` ou `system` (segue o SO). Se sem argumentos, exibe o tema atual. | `/theme dark` |
+| `/exit` | — | Fecha a aplicação | `/exit` |
 
 **Tratamento de erros nos meta-comandos:**
 - Comando desconhecido: exibe `Unknown command '/xyz'. Type /help for available commands.`
 - Argumentos inválidos: exibe mensagem descritiva (ex.: `/timeout abc` → `Invalid timeout value 'abc'. Expected a number.`)
 - `/reference` com assembly não encontrado: exibe `Assembly 'Foo.Bar' not found in the runtime.`
+- `/theme` com argumento inválido: exibe `Invalid theme 'blue'. Valid values: light, dark, system.`
 
 ### 5.5 Session State & Persistence (v1.1)
 
@@ -340,6 +361,7 @@ public class SessionSettings
     public List<string> ExtraImports { get; set; } = [];      // namespaces
     public int TimeoutSeconds { get; set; } = 30;              // 0 = no limit
     public string Language { get; set; } = "CSharp";           // "CSharp" ou "VisualBasic"
+    public string Theme { get; set; } = "System";              // "System", "Light", "Dark"
 }
 ```
 
@@ -377,6 +399,127 @@ O timeout é implementado via `CancellationTokenSource`:
 - O cancelamento **não** interrompe código nativo ou chamadas bloqueantes de I/O dentro do snippet do usuário.
 - Loops infinitos puros (`while(true){}`) **não** são interrompidos pelo timeout via `Task.Wait()` — o thread continua executando. Esta é uma limitação aceita para a v1.1.
 
+### 5.8 Theme Engine (v1.2)
+
+O QuickNET suporta três modos de tema, implementados via `FluentTheme` nativo do Avalonia:
+
+- **Light** — tema claro com cores padrão do Fluent.
+- **Dark** — tema escuro com `FluentThemeMode.Dark`.
+- **System** — detecta automaticamente o tema do Windows; também detecta modo de alto contraste (`SystemParameters.HighContrast`).
+
+**ThemeService (QuickNET.Core):**
+
+```csharp
+public enum AppTheme { System, Light, Dark }
+
+public class ThemeService
+{
+    public AppTheme CurrentTheme { get; }
+    public void SetTheme(AppTheme theme);   // persiste via SessionState
+    public AppTheme DetectSystemTheme();     // detecta tema do Windows
+}
+```
+
+- Registrado como singleton no DI.
+- Ao iniciar, lê `SessionSettings.Theme`. Se `"System"`, detecta o tema do SO.
+- Ao trocar de tema, notifica a camada de UI para aplicar o `FluentThemeMode` correspondente.
+- High contrast: quando o Windows está em modo de alto contraste e o tema é `System`, o FluentTheme automaticamente adapta-se graças ao suporte nativo do Avalonia.
+
+**Mecanismo de hot-reload:**
+1. O ViewModel detecta o evento `ThemeChanged` do `ThemeService`.
+2. Atualiza `Application.Current!.RequestedThemeVariant` ou faz swap de `FluentThemeMode` no `Application.Styles`.
+3. A UI inteira reflete a mudança imediatamente sem reinicialização.
+
+### 5.9 Autocomplete Engine (v1.2)
+
+O autocomplete usa o **Roslyn CompletionService** para fornecer sugestões contextuais baseadas na linguagem ativa e nos assemblies referenciados.
+
+**Arquitetura:**
+
+```
+Input do Usuário (keystroke)
+        │
+        ├── Debounce 300ms ou trigger manual (Ctrl+Space)
+        │      │
+        │      v
+        │   CompletionEngine.RequestCompletions(code, position, language)
+        │      │
+        │      v
+        │   AdhocWorkspace + Document update
+        │      │
+        │      v
+        │   CompletionService.GetCompletionsAsync()
+        │      │
+        │      v
+        │   List<CompletionItem> retornado para UI
+        │
+        └── Exibe popup com sugestões
+```
+
+**CompletionEngine (QuickNET.Core):**
+
+```csharp
+public class CompletionEngine
+{
+    public Task<IReadOnlyList<CompletionItem>> GetCompletionsAsync(
+        string code, int cursorPosition, Language language,
+        IReadOnlyList<string> extraReferences, IReadOnlyList<string> extraImports,
+        CancellationToken ct = default);
+}
+```
+
+- Mantém um `AdhocWorkspace` com um projeto e documento por linguagem.
+- A cada keystroke (após debounce), atualiza o documento com `WithText(SourceText.From(...))`.
+- Invoca `CompletionService.GetCompletionsAsync(document, cursorPosition)`.
+- Filtra e ordena resultados: keywords primeiro, depois membros por relevância.
+- Suporta cancelamento via `CancellationToken` (nova requisição cancela a anterior).
+- O workspace é recriado quando as referências/imports mudam (via `/reference`, `/import`).
+
+**Debounce:** 300ms. O timer reseta a cada keystroke. Se o usuário digitar antes de 300ms, a requisição anterior é cancelada e o timer reinicia.
+
+**Triggers:**
+- **Automático:** após digitar `.` (member access) ou após 3+ caracteres alfabéticos consecutivos.
+- **Manual:** `Ctrl+Space` a qualquer momento, mesmo com input vazio ou incompleto.
+
+**Modelo de item de completion:**
+
+```csharp
+public class CompletionItem
+{
+    public string DisplayText { get; init; }        // texto exibido
+    public string InsertText { get; init; }          // texto a inserir
+    public string? Description { get; init; }        // tooltip/descrição
+    public CompletionItemKind Kind { get; init; }    // Keyword, Method, Property, Class, etc.
+}
+```
+
+### 5.10 Input History Navigation (v1.2)
+
+Navegação estilo terminal: setas ↑↓ percorrem o histórico de inputs já executados.
+
+**InputHistoryService (QuickNET.Core):**
+
+```csharp
+public class InputHistoryService
+{
+    public void Record(string input);                   // adiciona ao histórico
+    public string? NavigateOlder(string currentDraft);  // seta ↑
+    public string? NavigateNewer();                     // seta ↓
+    public void Reset();                                // sai do modo navegação
+}
+```
+
+- Mantém um buffer circular das últimas 50 entradas únicas (case-sensitive).
+- **Draft preservation:** se o usuário digitar algo e navegar com ↑, o rascunho atual é salvo. Ao navegar de volta com ↓ até ultrapassar o mais recente, o rascunho é restaurado.
+- A posição de navegação reseta quando o input é submetido (Enter) ou quando o usuário edita o texto manualmente.
+- **Persistência:** salvo em `%APPDATA%\QuickNET\input-history.json` (JSON array de strings). Carregado ao iniciar.
+- Entradas duplicadas consecutivas não são adicionadas (se o mesmo comando for executado duas vezes seguidas, só entra uma vez).
+
+**Integração na UI:**
+- `MainWindow.axaml.cs` intercepta `Key.Up` e `Key.Down` no `InputBox`.
+- Se o popup de autocomplete estiver aberto, as setas navegam no popup (não no histórico).
+- Se o popup estiver fechado, as setas navegam no histórico de inputs.
+
 ---
 
 ## 6. Testing Strategy
@@ -404,6 +547,15 @@ O timeout é implementado via `CancellationTokenSource`:
 | **Assembly Resolution** | Resolução de nomes parciais para assemblies do runtime, fallback para não encontrados. | Unit |
 | **Timeout** | Execução com timeout via `Task.Wait`, timeout expirado retorna erro, timeout zero = sem limite. | Unit |
 | **Dynamic Compilation** | Compilação com referências e imports extras injetados dinamicamente. | Integration |
+| **Theme Service** | Detecção de tema do sistema, troca de tema, persistência em SessionSettings, notificação de mudança. | Unit |
+| **Theme Meta-command** | `/theme light`, `/theme dark`, `/theme system`, argumentos inválidos, sem argumentos (exibe atual). | Unit |
+| **Theme UI Hot-reload** | Troca de `FluentThemeMode` em runtime reflete na UI imediatamente. | Integration |
+| **Completion Engine** | Criação/atualização de AdhocWorkspace, CompletionService.GetCompletionsAsync, filtro de resultados, cancelamento. | Unit |
+| **Completion Triggers** | Debounce 300ms, trigger automático (`.` e 3+ chars), trigger manual (`Ctrl+Space`). | Unit |
+| **Completion Popup UI** | Exibição de popup flutuante, posicionamento junto ao cursor, navegação por setas, seleção com Enter, fechamento com Escape. | Unit |
+| **Input History Service** | Gravação de entradas, navegação ↑/↓, preservação de rascunho, reset, deduplicação consecutiva, limite de 50. | Unit |
+| **Input History Persistence** | Serialização/desserialização de `input-history.json`, carregamento ao iniciar, fallback para arquivo corrompido. | Unit |
+| **Input History UI** | Interceptação de Key.Up/Key.Down no InputBox, coexistência com popup de autocomplete. | Unit |
 
 ### 6.3 Coverage Target
 
@@ -420,7 +572,8 @@ O timeout é implementado via `CancellationTokenSource`:
 |---|---|---|
 | **Tempo de compilação elevado** para snippets complexos | Experiência degradada | Cache de assemblies do framework; medição de performance desde o MVP. |
 | **Memory leak** por assemblies acumulados em memória | Crash após muitas execuções | Uso de `AssemblyLoadContext` isolado e descartável por execução (já especificado no compilation model). |
-| **Ausência de syntax highlighting** reduz apelo visual | Adoção menor | Será introduzido na v1.2 como highlighting básico (palavras-chave + strings) com Avalonia.TextFormatting. |
+| **Ausência de syntax highlighting** reduz apelo visual | Adoção menor | Adiado para v3.0; compensado pelo autocomplete e temas na v1.2. |
+| **Complexidade do Roslyn CompletionService** gera popup lento ou com sugestões incorretas | Experiência degradada | Debounce de 300ms, cancelamento de requisições anteriores, cache do AdhocWorkspace. |
 | **Diferenças de comportamento C# vs VB.NET** no Roslyn | Funcionalidade inconsistente | Testar ambos os caminhos igualmente desde o início. |
 
 ### 7.2 Phased Roadmap
@@ -444,9 +597,11 @@ O timeout é implementado via `CancellationTokenSource`:
 - [x] Testes unitários para todas as novas features
 
 #### v1.2 — "UX Avançada"
-- [ ] Autocomplete / IntelliSense (popup)
-- [ ] Syntax highlighting básico (palavras-chave, strings, comentários)
-- [ ] Temas (claro/escuro)
+- [ ] Temas claro, escuro e alto contraste (detecção SO) com hot-reload
+- [ ] Autocomplete / IntelliSense via Roslyn CompletionService com popup flutuante
+- [ ] Navegação de histórico de inputs via setas ↑↓ (últimos 50)
+- [ ] `/theme` meta-comando
+- [ ] Testes unitários e de integração para todas as novas features
 
 #### v2.0 — "Cross-Platform & Extensibility"
 - [ ] Suporte a Linux e macOS
@@ -457,6 +612,7 @@ O timeout é implementado via `CancellationTokenSource`:
 #### v3.0 — "CLI & Advanced"
 - [ ] Versão CLI além da GUI
 - [ ] Debugger integrado
+- [ ] Syntax highlighting (palavras-chave, strings, comentários)
 
 ---
 
