@@ -1,10 +1,12 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:models="using:QuickNET.App.Models"
+        xmlns:vm="clr-namespace:QuickNET.App.ViewModels"
+        xmlns:models="clr-namespace:QuickNET.App.Models"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="620"
         x:Class="QuickNET.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
         Title="QuickNET"
         Width="900" Height="620"
         MinWidth="600" MinHeight="400"
@@ -14,23 +16,25 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal"
                     Margin="8,6" Spacing="10">
             <TextBlock Text="Lang:" VerticalAlignment="Center" />
-            <ComboBox x:Name="LanguageSelector" Width="120"
-                      SelectedIndex="0">
+            <ComboBox Width="120"
+                      SelectedIndex="{Binding SelectedLanguageIndex}">
                 <ComboBoxItem>C#</ComboBoxItem>
                 <ComboBoxItem>VB.NET</ComboBoxItem>
             </ComboBox>
-            <Button x:Name="ClearButton" Content="Clear"
-                    HorizontalAlignment="Right" />
+            <Button Content="Clear"
+                    Command="{Binding ClearHistoryCommand}" />
         </StackPanel>
 
         <ScrollViewer Grid.Row="1"
+                      x:Name="ConversationScroller"
                       AllowAutoHide="False">
-            <ItemsControl x:Name="ConversationPanel"
+            <ItemsControl ItemsSource="{Binding ConversationItems}"
                           Margin="8">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="models:ConversationItem">
                         <StackPanel Margin="0,2">
                             <TextBlock Text="{Binding DisplayText}"
+                                       Foreground="{Binding Foreground}"
                                        FontFamily="Cascadia Code, Consolas, monospace"
                                        FontSize="13" />
                         </StackPanel>
@@ -51,7 +55,7 @@
                                FontSize="11"
                                VerticalAlignment="Center" />
                 </StackPanel>
-                <TextBox x:Name="InputBox"
+                <TextBox Text="{Binding InputText}"
                          AcceptsReturn="True"
                          TextWrapping="Wrap"
                          FontFamily="Cascadia Code, Consolas, monospace"
@@ -65,8 +69,7 @@
         <Border Grid.Row="3"
                 Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
                 Padding="8,2">
-            <TextBlock x:Name="StatusText"
-                       Text="Ready"
+            <TextBlock Text="{Binding StatusText}"
                        FontSize="11" />
         </Border>
     </Grid>
