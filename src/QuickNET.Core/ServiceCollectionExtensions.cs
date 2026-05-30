@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using QuickNET.Compilation;
+using QuickNET.Completion;
 using QuickNET.Execution;
 using QuickNET.History;
 using QuickNET.MetaCommands;
@@ -23,6 +24,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<SessionState>();
         services.AddSingleton<MetaCommandService>();
         services.AddSingleton<AssemblyResolutionService>();
+        services.AddSingleton<CompletionEngine>();
         services.AddSingleton<ThemeService>();
         return services;
     }

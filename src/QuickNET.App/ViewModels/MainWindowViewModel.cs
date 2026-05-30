@@ -1,7 +1,10 @@
 using System.Collections.ObjectModel;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using QuickNET.App.Completion;
 using QuickNET.App.Models;
+using QuickNET.Completion;
 using QuickNET.History;
 using QuickNET.MetaCommands;
 using QuickNET.Models;
@@ -17,8 +20,14 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly MetaCommandService _metaCommandService;
     private readonly SessionState _sessionState;
     private readonly ThemeService _themeService;
+    private readonly CompletionEngine _completionEngine;
+    private CancellationTokenSource? _completionCts;
+    private DispatcherTimer? _completionDebounceTimer;
+    private int _inputBoxCaretPosition;
 
     public event EventHandler? CloseRequested;
+    public event EventHandler? CompletionRequested;
+    public event EventHandler<int>? CaretPositionChanged;
 
     [ObservableProperty]
     private string _inputText = "";
@@ -31,15 +40,18 @@ public partial class MainWindowViewModel : ObservableObject
 
     public ObservableCollection<ConversationItem> ConversationItems { get; } = [];
 
+    public CompletionViewModel Completion { get; } = new();
+
     public MainWindowViewModel(ReplEngine engine, HistoryService history,
         MetaCommandService metaCommandService, SessionState sessionState,
-        ThemeService themeService)
+        ThemeService themeService, CompletionEngine completionEngine)
     {
         _engine = engine;
         _history = history;
         _metaCommandService = metaCommandService;
         _sessionState = sessionState;
         _themeService = themeService;
+        _completionEngine = completionEngine;
         LoadHistory();
 
         _selectedLanguageIndex = _sessionState.CurrentLanguage == Language.CSharp ? 0 : 1;
@@ -179,5 +191,80 @@ public partial class MainWindowViewModel : ObservableObject
             var themePart = string.IsNullOrEmpty(themeLabel) ? "" : $"{themeLabel} | ";
             return $"{themePart}{lang} | Timeout: {timeoutLabel} | Refs: {_sessionState.ExtraReferences.Count} | Imports: {_sessionState.ExtraImports.Count}";
         }
+    }
+
+    public void OnCaretPositionChanged(int position)
+    {
+        _inputBoxCaretPosition = position;
+    }
+
+    public void RequestCompletions(string code, int cursorPosition)
+    {
+        _completionCts?.Cancel();
+        _completionCts?.Dispose();
+        _completionCts = null;
+
+        _completionDebounceTimer?.Stop();
+        _completionDebounceTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(300)
+        };
+        _completionDebounceTimer.Tick += async (_, _) =>
+        {
+            _completionDebounceTimer.Stop();
+            await FetchCompletions(code, cursorPosition);
+        };
+        _completionDebounceTimer.Start();
+    }
+
+    public void RequestCompletionsManually()
+    {
+        Completion.Hide();
+        _completionCts?.Cancel();
+        _completionCts?.Dispose();
+        _completionCts = null;
+        _completionDebounceTimer?.Stop();
+        _ = FetchCompletions(InputText, _inputBoxCaretPosition);
+    }
+
+    private async Task FetchCompletions(string code, int cursorPosition)
+    {
+        _completionCts = new CancellationTokenSource();
+        var ct = _completionCts.Token;
+
+        try
+        {
+            var language = SelectedLanguageIndex == 0 ? Language.CSharp : Language.VisualBasic;
+            var items = await _completionEngine.GetCompletionsAsync(
+                code, cursorPosition, language,
+                _sessionState.ExtraReferences, _sessionState.ExtraImports, ct);
+
+            if (!ct.IsCancellationRequested)
+            {
+                Completion.SetItems(items);
+                CompletionRequested?.Invoke(this, EventArgs.Empty);
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception) { Completion.Hide(); }
+    }
+
+    public void AcceptCompletion()
+    {
+        if (!Completion.IsVisible || Completion.SelectedItem is null) return;
+
+        var insertText = Completion.SelectedItem.InsertText;
+        var cursorPos = _inputBoxCaretPosition;
+
+        var wordStart = cursorPos;
+        while (wordStart > 0 && (char.IsLetterOrDigit(InputText[wordStart - 1]) || InputText[wordStart - 1] == '_'))
+            wordStart--;
+
+        var before = InputText[..wordStart];
+        var after = InputText[cursorPos..];
+        InputText = before + insertText + after;
+
+        Completion.Hide();
+        CaretPositionChanged?.Invoke(this, wordStart + insertText.Length);
     }
 }

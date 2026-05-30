@@ -2,6 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="clr-namespace:QuickNET.App.ViewModels"
         xmlns:models="clr-namespace:QuickNET.App.Models"
+        xmlns:controls="clr-namespace:QuickNET.App.Controls"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="900" d:DesignHeight="620"
@@ -62,5 +63,14 @@
                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
             </StackPanel>
         </Border>
+
+        <Popup x:Name="CompletionOverlay"
+               IsOpen="{Binding Completion.IsVisible}"
+               Placement="Top"
+               HorizontalOffset="0" VerticalOffset="-4"
+               Grid.RowSpan="3">
+            <controls:CompletionPopup x:Name="CompletionPopupControl"
+                                       DataContext="{Binding Completion}" />
+        </Popup>
     </Grid>
 </Window>
