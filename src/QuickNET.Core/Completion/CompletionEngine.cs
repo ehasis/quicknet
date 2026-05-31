@@ -33,7 +33,9 @@ public class CompletionEngine
     {
         ct.ThrowIfCancellationRequested();
 
-        var workspace = GetOrCreateWorkspace(sourceCode, language, extraReferences, extraImports);
+        var (wrappedCode, adjustedPosition) = WrapForCompletion(sourceCode, cursorPosition, language);
+
+        var workspace = GetOrCreateWorkspace(wrappedCode, language, extraReferences, extraImports);
         var project = workspace.CurrentSolution.Projects.FirstOrDefault();
         if (project is null)
             return Array.Empty<CompletionItem>();
@@ -42,7 +44,7 @@ public class CompletionEngine
         if (document is null)
             return Array.Empty<CompletionItem>();
 
-        var sourceText = SourceText.From(sourceCode);
+        var sourceText = SourceText.From(wrappedCode);
         document = document.WithText(sourceText);
 
         var completionService = RoslynCompletionService.GetService(document);
@@ -51,7 +53,7 @@ public class CompletionEngine
 
         ct.ThrowIfCancellationRequested();
 
-        var completions = await completionService.GetCompletionsAsync(document, cursorPosition, cancellationToken: ct);
+        var completions = await completionService.GetCompletionsAsync(document, adjustedPosition, cancellationToken: ct);
         if (completions is null)
             return Array.Empty<CompletionItem>();
 
@@ -69,6 +71,21 @@ public class CompletionEngine
                 || (i.FilterText ?? i.DisplayText).StartsWith(filterText, StringComparison.OrdinalIgnoreCase))
             .Select(i => MapToCompletionItem(i, document))
             .ToList();
+    }
+
+    private static (string wrappedCode, int adjustedPosition) WrapForCompletion(
+        string sourceCode, int cursorPosition, Language language)
+    {
+        if (language == Language.CSharp)
+        {
+            const string prefix = "class __W { void __M() { ";
+            const string suffix = " } }";
+            return (prefix + sourceCode + suffix, cursorPosition + prefix.Length);
+        }
+
+        const string vbPrefix = "Module __W\n    Sub __M()\n        Dim __x = ";
+        const string vbSuffix = "\n    End Sub\nEnd Module";
+        return (vbPrefix + sourceCode + vbSuffix, cursorPosition + vbPrefix.Length);
     }
 
     private AdhocWorkspace GetOrCreateWorkspace(

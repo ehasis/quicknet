@@ -16,31 +16,30 @@ public sealed class CompletionEngineTests
     }
 
     [TestMethod]
-    public async Task GetCompletions_DotTrigger_DoesNotThrow()
+    public async Task GetCompletions_DotTrigger_IsNotEmpty()
     {
         var engine = CreateEngine();
-        var items = await engine.GetCompletionsAsync("Console.", 8, Language.CSharp);
+        var items = await engine.GetCompletionsAsync("System.", 7, Language.CSharp);
 
-        Assert.IsNotNull(items);
-        // Completions may be empty in test environment due to MEF workspace limitations
+        Assert.IsNotEmpty(items);
     }
 
     [TestMethod]
-    public async Task GetCompletions_IdentifierPrefix_DoesNotThrow()
+    public async Task GetCompletions_IdentifierPrefix_IsNotEmpty()
     {
         var engine = CreateEngine();
-        var items = await engine.GetCompletionsAsync("Con", 3, Language.CSharp);
+        var items = await engine.GetCompletionsAsync("Sys", 3, Language.CSharp);
 
-        Assert.IsNotNull(items);
+        Assert.IsNotEmpty(items);
     }
 
     [TestMethod]
-    public async Task GetCompletions_EmptyInput_DoesNotThrow()
+    public async Task GetCompletions_EmptyInput_IsNotEmpty()
     {
         var engine = CreateEngine();
         var items = await engine.GetCompletionsAsync("", 0, Language.CSharp);
 
-        Assert.IsNotNull(items);
+        Assert.IsNotEmpty(items);
     }
 
     [TestMethod]
@@ -52,7 +51,7 @@ public sealed class CompletionEngineTests
 
         try
         {
-            await engine.GetCompletionsAsync("Console.", 8, Language.CSharp,
+            await engine.GetCompletionsAsync("System.", 7, Language.CSharp,
                 ct: cts.Token);
             Assert.Fail("Expected OperationCanceledException");
         }
@@ -62,60 +61,60 @@ public sealed class CompletionEngineTests
     }
 
     [TestMethod]
-    public async Task GetCompletions_CSharp_Language_DoesNotThrow()
+    public async Task GetCompletions_CSharp_Language_IsNotEmpty()
     {
         var engine = CreateEngine();
-        var items = await engine.GetCompletionsAsync("Console.", 8, Language.CSharp);
+        var items = await engine.GetCompletionsAsync("System.", 7, Language.CSharp);
 
-        Assert.IsNotNull(items);
+        Assert.IsNotEmpty(items);
     }
 
     [TestMethod]
-    public async Task GetCompletions_VisualBasic_Language_DoesNotThrow()
+    public async Task GetCompletions_VisualBasic_Language_IsNotEmpty()
     {
         var engine = CreateEngine();
-        var items = await engine.GetCompletionsAsync("Console.", 8, Language.VisualBasic);
+        var items = await engine.GetCompletionsAsync("System.", 7, Language.VisualBasic);
 
-        Assert.IsNotNull(items);
+        Assert.IsNotEmpty(items);
     }
 
     [TestMethod]
-    public async Task GetCompletions_LanguageSwitch_DoesNotThrow()
+    public async Task GetCompletions_LanguageSwitch_IsNotEmpty()
     {
         var engine = CreateEngine();
 
-        var csharpItems = await engine.GetCompletionsAsync("Console.", 8, Language.CSharp);
-        Assert.IsNotNull(csharpItems);
+        var csharpItems = await engine.GetCompletionsAsync("System.", 7, Language.CSharp);
+        Assert.IsNotEmpty(csharpItems);
 
-        var vbItems = await engine.GetCompletionsAsync("Console.", 8, Language.VisualBasic);
-        Assert.IsNotNull(vbItems);
+        var vbItems = await engine.GetCompletionsAsync("System.", 7, Language.VisualBasic);
+        Assert.IsNotEmpty(vbItems);
 
-        var csharpAgain = await engine.GetCompletionsAsync("Console.", 8, Language.CSharp);
-        Assert.IsNotNull(csharpAgain);
+        var csharpAgain = await engine.GetCompletionsAsync("System.", 7, Language.CSharp);
+        Assert.IsNotEmpty(csharpAgain);
     }
 
     [TestMethod]
-    public async Task GetCompletions_ExtraReferences_DoesNotThrow()
+    public async Task GetCompletions_ExtraReferences_IsNotEmpty()
     {
         var engine = CreateEngine();
 
-        var first = await engine.GetCompletionsAsync("Console.", 8, Language.CSharp);
-        Assert.IsNotNull(first);
+        var first = await engine.GetCompletionsAsync("System.", 7, Language.CSharp);
+        Assert.IsNotEmpty(first);
 
-        var second = await engine.GetCompletionsAsync("Console.", 8, Language.CSharp,
+        var second = await engine.GetCompletionsAsync("System.", 7, Language.CSharp,
             extraReferences: ["System.Text.Json"]);
-        Assert.IsNotNull(second);
+        Assert.IsNotEmpty(second);
 
-        var third = await engine.GetCompletionsAsync("Console.", 8, Language.CSharp);
-        Assert.IsNotNull(third);
+        var third = await engine.GetCompletionsAsync("System.", 7, Language.CSharp);
+        Assert.IsNotEmpty(third);
     }
 
     [TestMethod]
-    public async Task GetCompletions_CursorPositionAtZero_DoesNotThrow()
+    public async Task GetCompletions_CursorPositionAtZero_IsNotEmpty()
     {
         var engine = CreateEngine();
-        var items = await engine.GetCompletionsAsync("Console", 0, Language.CSharp);
+        var items = await engine.GetCompletionsAsync("System", 0, Language.CSharp);
 
-        Assert.IsNotNull(items);
+        Assert.IsNotEmpty(items);
     }
 }
