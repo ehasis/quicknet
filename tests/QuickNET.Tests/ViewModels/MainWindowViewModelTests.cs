@@ -21,7 +21,9 @@ public sealed class MainWindowViewModelTests
         _tempDir = Path.Combine(Path.GetTempPath(), $"QuickNET_Test_{Guid.NewGuid():N}");
         var tempHistoryPath = Path.Combine(_tempDir, "history.json");
         var tempSettingsPath = Path.Combine(_tempDir, "settings.json");
+        var tempInputHistoryPath = Path.Combine(_tempDir, "input-history.json");
         services.AddSingleton(new HistoryManager(tempHistoryPath));
+        services.AddSingleton(new InputHistoryService(tempInputHistoryPath));
         var sessionState = new SessionState(tempSettingsPath);
         services.AddSingleton(sessionState);
         services.AddSingleton(new ThemeService(sessionState));
@@ -279,5 +281,72 @@ public sealed class MainWindowViewModelTests
         var info = vm.SessionInfoText;
 
         Assert.Contains("Light |", info);
+    }
+
+    [TestMethod]
+    public void ExecuteCode_RecordsInputInHistory()
+    {
+        var vm = _provider.GetRequiredService<MainWindowViewModel>();
+        vm.InputText = "2 + 2";
+
+        vm.ExecuteCodeCommand.Execute(null);
+
+        var inputHistory = _provider.GetRequiredService<InputHistoryService>();
+        var entries = inputHistory.GetEntries();
+        Assert.AreEqual(1, entries.Count);
+        Assert.AreEqual("2 + 2", entries[0]);
+    }
+
+    [TestMethod]
+    public void ExecuteCode_MetaCommand_NotRecordedInInputHistory()
+    {
+        var vm = _provider.GetRequiredService<MainWindowViewModel>();
+        vm.InputText = "/help";
+
+        vm.ExecuteCodeCommand.Execute(null);
+
+        var inputHistory = _provider.GetRequiredService<InputHistoryService>();
+        Assert.AreEqual(0, inputHistory.Count);
+    }
+
+    [TestMethod]
+    public void NavigateHistoryOlder_UpdatesInputText()
+    {
+        var inputHistory = _provider.GetRequiredService<InputHistoryService>();
+        inputHistory.Record("prev");
+        var vm = _provider.GetRequiredService<MainWindowViewModel>();
+        vm.InputText = "";
+
+        vm.NavigateHistoryOlder();
+
+        Assert.AreEqual("prev", vm.InputText);
+    }
+
+    [TestMethod]
+    public void NavigateHistoryNewer_AfterOlder_RestoresDraft()
+    {
+        var inputHistory = _provider.GetRequiredService<InputHistoryService>();
+        inputHistory.Record("a");
+        var vm = _provider.GetRequiredService<MainWindowViewModel>();
+        vm.InputText = "draft";
+
+        vm.NavigateHistoryOlder();
+        vm.NavigateHistoryNewer();
+
+        Assert.AreEqual("draft", vm.InputText);
+    }
+
+    [TestMethod]
+    public void ResetHistoryNavigation_AfterNavigate_Resets()
+    {
+        var inputHistory = _provider.GetRequiredService<InputHistoryService>();
+        inputHistory.Record("a");
+        var vm = _provider.GetRequiredService<MainWindowViewModel>();
+        vm.InputText = "x";
+
+        vm.NavigateHistoryOlder();
+        vm.ResetHistoryNavigation();
+
+        Assert.IsNull(inputHistory.NavigateNewer());
     }
 }

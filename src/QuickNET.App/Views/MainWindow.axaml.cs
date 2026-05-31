@@ -12,6 +12,9 @@ namespace QuickNET.App.Views;
 
 public partial class MainWindow : Window
 {
+    private bool _isNavigatingHistory;
+    private bool _isAcceptingCompletion;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -24,11 +27,33 @@ public partial class MainWindow : Window
     {
         if (DataContext is not MainWindowViewModel vm) return;
 
-        if (e.Key == Key.Tab && vm.Completion.IsVisible)
+        if (vm.Completion.IsVisible)
         {
-            vm.AcceptCompletion();
-            e.Handled = true;
+            if (e.Key == Key.Tab)
+            {
+                _isAcceptingCompletion = true;
+                vm.AcceptCompletion();
+                e.Handled = true;
+            }
         }
+        else
+        {
+            if (e.Key == Key.Up && InputBox.CaretIndex == (InputBox.Text?.Length ?? 0))
+            {
+                vm.NavigateHistoryOlder();
+                _isNavigatingHistory = true;
+                e.Handled = true;
+                return;
+            }
+            if (e.Key == Key.Down && InputBox.CaretIndex == (InputBox.Text?.Length ?? 0))
+            {
+                vm.NavigateHistoryNewer();
+                _isNavigatingHistory = true;
+                e.Handled = true;
+                return;
+            }
+        }
+
     }
 
     private void OnKeyDown(object? sender, KeyEventArgs e)
@@ -65,12 +90,14 @@ public partial class MainWindow : Window
                 case Key.Enter:
                     if (e.KeyModifiers == KeyModifiers.None)
                     {
+                        _isAcceptingCompletion = true;
                         vm.AcceptCompletion();
                         e.Handled = true;
                         return;
                     }
                     break;
                 case Key.Tab:
+                    _isAcceptingCompletion = true;
                     vm.AcceptCompletion();
                     e.Handled = true;
                     return;
@@ -119,12 +146,24 @@ public partial class MainWindow : Window
             InputBox.CaretIndex = position;
         };
 
+        vm.HistoryCursorMoved += (_, position) =>
+        {
+            InputBox.CaretIndex = position;
+        };
+
         CompletionOverlay.PlacementTarget = InputBox;
 
         InputBox.TextChanged += (_, _) =>
         {
             var text = InputBox.Text ?? "";
             var pos = InputBox.CaretIndex;
+
+            if (!_isNavigatingHistory && !_isAcceptingCompletion)
+            {
+                vm.ResetHistoryNavigation();
+            }
+            _isNavigatingHistory = false;
+            _isAcceptingCompletion = false;
 
             if (vm.Completion.IsVisible)
             {

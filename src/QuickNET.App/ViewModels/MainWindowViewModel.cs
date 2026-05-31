@@ -21,6 +21,7 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly SessionState _sessionState;
     private readonly ThemeService _themeService;
     private readonly CompletionEngine _completionEngine;
+    private readonly InputHistoryService _inputHistory;
     private CancellationTokenSource? _completionCts;
     private DispatcherTimer? _completionDebounceTimer;
     private int _inputBoxCaretPosition;
@@ -28,6 +29,7 @@ public partial class MainWindowViewModel : ObservableObject
     public event EventHandler? CloseRequested;
     public event EventHandler? CompletionRequested;
     public event EventHandler<int>? CaretPositionChanged;
+    public event EventHandler<int>? HistoryCursorMoved;
 
     [ObservableProperty]
     private string _inputText = "";
@@ -44,7 +46,8 @@ public partial class MainWindowViewModel : ObservableObject
 
     public MainWindowViewModel(ReplEngine engine, HistoryService history,
         MetaCommandService metaCommandService, SessionState sessionState,
-        ThemeService themeService, CompletionEngine completionEngine)
+        ThemeService themeService, CompletionEngine completionEngine,
+        InputHistoryService inputHistory)
     {
         _engine = engine;
         _history = history;
@@ -52,6 +55,7 @@ public partial class MainWindowViewModel : ObservableObject
         _sessionState = sessionState;
         _themeService = themeService;
         _completionEngine = completionEngine;
+        _inputHistory = inputHistory;
         LoadHistory();
 
         _selectedLanguageIndex = _sessionState.CurrentLanguage == Language.CSharp ? 0 : 1;
@@ -124,6 +128,7 @@ public partial class MainWindowViewModel : ObservableObject
         });
 
         _history.Record(input, langLabel, outputText, !result.Success);
+        _inputHistory.Record(input);
 
         InputText = "";
         StatusText = result.Success ? "Ready" : "Error";
@@ -266,5 +271,31 @@ public partial class MainWindowViewModel : ObservableObject
 
         Completion.Hide();
         CaretPositionChanged?.Invoke(this, wordStart + insertText.Length);
+    }
+
+    public void NavigateHistoryOlder()
+    {
+        var current = InputText ?? "";
+        var result = _inputHistory.NavigateOlder(current);
+        if (result is not null)
+        {
+            InputText = result;
+            HistoryCursorMoved?.Invoke(this, result.Length);
+        }
+    }
+
+    public void NavigateHistoryNewer()
+    {
+        var result = _inputHistory.NavigateNewer();
+        if (result is not null)
+        {
+            InputText = result;
+            HistoryCursorMoved?.Invoke(this, result.Length);
+        }
+    }
+
+    public void ResetHistoryNavigation()
+    {
+        _inputHistory.Reset();
     }
 }

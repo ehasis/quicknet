@@ -21,6 +21,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ReplEngine>();
         services.AddSingleton<HistoryManager>();
         services.AddSingleton<HistoryService>();
+        services.AddSingleton<InputHistoryService>();
         services.AddSingleton<SessionState>();
         services.AddSingleton<MetaCommandService>();
         services.AddSingleton<AssemblyResolutionService>();
