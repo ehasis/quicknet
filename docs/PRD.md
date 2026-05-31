@@ -1,8 +1,8 @@
 # QuickNET — Product Requirements Document
 
 > **Versão:** 1.2 — UX Avançada  
-> **Data:** 2026-05-29  
-> **Status:** Draft
+> **Data:** 2026-05-30  
+> **Status:** Done
 
 ---
 
@@ -24,7 +24,7 @@ O **QuickNET** é uma aplicação desktop leve que funciona como um REPL (Read-E
 - **K4:** Cobertura de testes unitários >= 70% nos módulos core (compilação, execução, parsing).
 - **K5:** Meta-comandos (`/clear`, `/help`, `/reference`, `/import`, `/references`, `/imports`, `/timeout`, `/lang`) funcionam via input text sem interferir na execução normal de código.
 - **K6:** Alternância de temas (claro/escuro/alto contraste) em tempo real sem reinicialização, com detecção automática do tema do sistema operacional.
-- **K7:** Autocomplete via Roslyn CompletionService com debounce de 300ms, ativado automaticamente após `.` ou 3+ caracteres, e manualmente via `Ctrl+Space`.
+- **K7:** Autocomplete via Roslyn CompletionService com debounce de 300ms, ativado automaticamente após `.` e manualmente via `Ctrl+Space`.
 - **K8:** Navegação de histórico de inputs via setas ↑↓ (últimos 50 inputs), com preservação do rascunho atual durante a navegação.
 
 ---
@@ -53,7 +53,7 @@ O **QuickNET** é uma aplicação desktop leve que funciona como um REPL (Read-E
 | **US-08** | Como desenvolvedor, quero configurar um timeout de execução para evitar que loops infinitos travem a aplicação. | - Timeout padrão de 30s.<br>- Timeout pode ser alterado via `/timeout <segundos>`.<br>- Execução é cancelada após o timeout com mensagem clara. |
 | **US-09** | Como desenvolvedor, quero que minhas configurações de sessão (referências, imports, timeout, linguagem) sejam preservadas ao fechar e reabrir a aplicação. | - Configurações salvas automaticamente em `%APPDATA%\QuickNET\settings.json`.<br>- Carregadas ao iniciar a aplicação.<br>- Arquivo corrompido não causa crash (fallback para defaults). |
 | **US-10** | Como desenvolvedor, quero alternar entre tema claro, escuro e alto contraste para adequar a interface ao meu ambiente e preferência. | - `/theme light`, `/theme dark`, `/theme system` alternam o tema.<br>- Por padrão, o tema segue o sistema operacional.<br>- A troca é imediata (hot-reload) sem reiniciar a aplicação.<br>- A preferência de tema persiste entre sessões. |
-| **US-11** | Como desenvolvedor, quero autocomplete de código enquanto digito para acelerar a escrita de APIs e reduzir erros de digitação. | - Popup flutuante aparece automaticamente após `.` ou após 3+ caracteres com debounce de 300ms.<br>- Também ativável manualmente via `Ctrl+Space`.<br>- Sugestões incluem keywords da linguagem ativa e membros de tipos dos assemblies referenciados.<br>- Navegação por setas ↑↓ e Enter para selecionar, Escape para fechar.<br>- Funciona para C# e VB.NET conforme a linguagem ativa. |
+| **US-11** | Como desenvolvedor, quero autocomplete de código enquanto digito para acelerar a escrita de APIs e reduzir erros de digitação. | - Popup flutuante aparece automaticamente após `.` com debounce de 300ms.<br>- Também ativável manualmente via `Ctrl+Space`.<br>- A cada digitação com o popup aberto, a lista é atualizada.<br>- Sugestões incluem keywords da linguagem ativa e membros de tipos dos assemblies referenciados.<br>- Navegação por setas ↑↓, PageUp/PageDown, Tab e Enter para selecionar, Escape para fechar.<br>- Funciona para C# e VB.NET conforme a linguagem ativa. |
 | **US-12** | Como desenvolvedor, quero navegar pelo histórico de comandos já executados para reexecutar ou editar inputs anteriores. | - Seta ↑ navega para inputs mais antigos (até 50 entradas).<br>- Seta ↓ navega para inputs mais recentes.<br>- O rascunho atual (se houver) é preservado ao navegar e restaurado ao voltar.<br>- Histórico de inputs persiste entre sessões.<br>- Funciona mesmo com input vazio (começa do mais recente). |
 
 ### 2.3 Acceptance Criteria (Gerais)
@@ -69,7 +69,7 @@ O **QuickNET** é uma aplicação desktop leve que funciona como um REPL (Read-E
 - **v1.1:** A barra de status exibe linguagem ativa, timeout, referências e imports.
 - **v1.1:** Configurações de sessão (referências, imports, timeout, linguagem) persistem em `settings.json`.
 - **v1.2:** Temas (claro, escuro, alto contraste) alternáveis via `/theme` com hot-reload e detecção do SO.
-- **v1.2:** Autocomplete popup flutuante com Roslyn CompletionService (keywords + membros), debounce 300ms, ativação automática e manual (`Ctrl+Space`).
+- **v1.2:** Autocomplete popup flutuante com Roslyn CompletionService (keywords + membros), debounce 300ms, ativação automática (`.`), manual (`Ctrl+Space`), e filtro em tempo real a cada digitação.
 - **v1.2:** Navegação de histórico de inputs via setas ↑↓ (50 entradas) com preservação de rascunho.
 
 ### 2.4 Non-Goals (v1.2)
@@ -220,7 +220,7 @@ Compilação → Assembly em memória → Invoke Execute() → Exibe "4"
 1. Usuário define a linguagem via `/lang cs` ou `/lang vb`.
 2. Usuário define o tema via `/theme light`, `/theme dark` ou `/theme system` (padrão: system).
 3. Usuário digita código no campo de input.
-   - **v1.2:** Autocomplete popup aparece automaticamente após `.` ou 3+ caracteres (debounce 300ms), ou manualmente via `Ctrl+Space`.
+   - **v1.2:** Autocomplete popup aparece automaticamente após `.` (debounce 300ms) e atualiza a lista a cada digitação. Ativação manual via `Ctrl+Space`.
 4. Pressiona `Enter` (single-line) ou `Shift+Enter` (multi-line) para executar.
    - **v1.2:** Seta ↑/↓ navega pelo histórico de inputs (últimos 50) sem submeter.
 5. O input aparece no painel de conversação com prefixo `>`.
@@ -478,8 +478,9 @@ public class CompletionEngine
 **Debounce:** 300ms. O timer reseta a cada keystroke. Se o usuário digitar antes de 300ms, a requisição anterior é cancelada e o timer reinicia.
 
 **Triggers:**
-- **Automático:** após digitar `.` (member access) ou após 3+ caracteres alfabéticos consecutivos.
+- **Automático:** após digitar `.` (member access).
 - **Manual:** `Ctrl+Space` a qualquer momento, mesmo com input vazio ou incompleto.
+- **Filter em tempo real:** com o popup aberto, cada digitação dispara nova requisição (debounce 300ms) para filtrar a lista pelo texto digitado.
 
 **Modelo de item de completion:**
 
@@ -551,7 +552,7 @@ public class InputHistoryService
 | **Theme Meta-command** | `/theme light`, `/theme dark`, `/theme system`, argumentos inválidos, sem argumentos (exibe atual). | Unit |
 | **Theme UI Hot-reload** | Troca de `FluentThemeMode` em runtime reflete na UI imediatamente. | Integration |
 | **Completion Engine** | Criação/atualização de AdhocWorkspace, CompletionService.GetCompletionsAsync, filtro de resultados, cancelamento. | Unit |
-| **Completion Triggers** | Debounce 300ms, trigger automático (`.` e 3+ chars), trigger manual (`Ctrl+Space`). | Unit |
+| **Completion Triggers** | Debounce 300ms, trigger automático (`.`), trigger manual (`Ctrl+Space`). | Unit |
 | **Completion Popup UI** | Exibição de popup flutuante, posicionamento junto ao cursor, navegação por setas, seleção com Enter, fechamento com Escape. | Unit |
 | **Input History Service** | Gravação de entradas, navegação ↑/↓, preservação de rascunho, reset, deduplicação consecutiva, limite de 50. | Unit |
 | **Input History Persistence** | Serialização/desserialização de `input-history.json`, carregamento ao iniciar, fallback para arquivo corrompido. | Unit |
@@ -596,12 +597,12 @@ public class InputHistoryService
 - [x] Barra de status com linguagem, timeout, refs e imports
 - [x] Testes unitários para todas as novas features
 
-#### v1.2 — "UX Avançada"
-- [ ] Temas claro, escuro e alto contraste (detecção SO) com hot-reload
-- [ ] Autocomplete / IntelliSense via Roslyn CompletionService com popup flutuante
-- [ ] Navegação de histórico de inputs via setas ↑↓ (últimos 50)
-- [ ] `/theme` meta-comando
-- [ ] Testes unitários e de integração para todas as novas features
+#### v1.2 — "UX Avançada" ✅
+- [x] Temas claro, escuro e alto contraste (detecção SO) com hot-reload
+- [x] Autocomplete / IntelliSense via Roslyn CompletionService com popup flutuante
+- [x] Navegação de histórico de inputs via setas ↑↓ (últimos 50)
+- [x] `/theme` meta-comando
+- [x] Testes unitários e de integração para todas as novas features
 
 #### v2.0 — "Cross-Platform & Extensibility"
 - [ ] Suporte a Linux e macOS

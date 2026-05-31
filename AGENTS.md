@@ -20,18 +20,33 @@ dotnet run --project src/QuickNET.App      # launch the desktop app
 
 ```
 QuickNET.Core (classlib, net10.0)
-  ├── Models/          -- records/enums: Language, CompilationInput/Result, ExecutionInput/Result
+  ├── Models/          -- records/enums: Language, CompilationInput/Result, ExecutionInput/Result, CompletionItem, etc.
   ├── Templates/       -- ITemplateEngine → CSharpTemplateEngine, VbTemplateEngine
-  ├── Compilation/     -- CompilationService (Roslyn CSharpCompilation / VisualBasicCompilation)
+  ├── Compilation/     -- CompilationService, AssemblyResolutionService
+  ├── Completion/      -- CompletionEngine (Roslyn AdhocWorkspace + CompletionService)
   ├── Execution/       -- ExecutionService, QuickNETAssemblyLoadContext (isolated + collectible)
+  ├── History/         -- HistoryManager, HistoryService, InputHistoryService
+  ├── MetaCommands/    -- MetaCommandParser, MetaCommandService
+  ├── Session/         -- SessionState
+  ├── Theme/           -- ThemeService, AppTheme
   └── ReplEngine.cs    -- public orchestrator: Compile → Execute pipeline
 QuickNET.App (WinExe, net10.0-windows)
   ├── Models/          -- ConversationItem (display model with Foreground brush)
-  ├── Views/           -- MainWindow (full layout with compiled bindings, key handling, auto-scroll)
-  ├── ViewModels/      -- MainWindowViewModel (ObservableObject, [RelayCommand], [ObservableProperty])
+  ├── Controls/        -- CompletionPopup (autocomplete flyout)
+  ├── Completion/      -- TriggerHelper (autocomplete trigger logic)
+  ├── Views/           -- MainWindow (full layout with Popup, key handling, auto-scroll)
+  ├── ViewModels/      -- MainWindowViewModel, CompletionViewModel
   └── Program.cs       -- entry point with DI wiring via ServiceCollection
 QuickNET.Tests (MSTest.Sdk, net10.0-windows)
-  └── references both Core and App projects
+  ├── Compilation/     -- CompilationServiceTests, AssemblyResolutionServiceTests, TemplateEngineTests, etc.
+  ├── Completion/      -- CompletionEngineTests, CompletionTriggerTests
+  ├── Execution/       -- ExecutionServiceTests, ReplEngineTests, TimeoutTests, etc.
+  ├── History/         -- HistoryManagerTests, HistoryServiceTests, InputHistoryServiceTests, InputHistoryPersistenceTests
+  ├── Integration/     -- ThemeIntegrationTests, CompletionIntegrationTests, InputHistoryIntegrationTests, DIIntegrationTests
+  ├── MetaCommands/    -- MetaCommandParserTests, MetaCommandServiceTests
+  ├── Session/         -- SessionStateTests
+  ├── Theme/           -- ThemeServiceTests
+  └── ViewModels/      -- MainWindowViewModelTests, CompletionViewModelTests
 ```
 
 - `QuickNET.App` depends on `QuickNET.Core`. Tests depend on both.
@@ -71,6 +86,15 @@ Work is organized in sequential task blocks under `docs/tasks/`. Current status:
 - TASKS-5 (UI shell) — **done**
 - TASKS-6 (UI wiring / ViewModels) — **done**
 - TASKS-7 (tests) — **done** (52 tests, 0 failures)
+- TASKS-8 (session state & meta-commands) — **done**
+- TASKS-9 (dynamic references & imports) — **done**
+- TASKS-10 (execution timeout) — **done**
+- TASKS-11 (UI updates v1.1) — **done**
+- TASKS-12 (tests v1.1) — **done**
+- TASKS-13 (theme system) — **done**
+- TASKS-14 (autocomplete engine & popup) — **done**
+- TASKS-15 (input history navigation) — **done**
+- TASKS-16 (integration & final tests) — **done**
 
 ## MVP Non-Goals (do not implement)
-No IntelliSense, no syntax highlighting, no CLI mode, no meta-commands (`/clear`, `/help`), no cross-platform (Windows only), no shared context between executions, no NuGet import at runtime.
+No syntax highlighting, no CLI mode, no cross-platform (Windows only), no shared context between executions, no NuGet import at runtime.
