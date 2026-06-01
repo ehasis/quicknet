@@ -24,6 +24,8 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly InputHistoryService _inputHistory;
     private CancellationTokenSource? _completionCts;
     private DispatcherTimer? _completionDebounceTimer;
+    private CancellationTokenSource? _signatureCts;
+    private DispatcherTimer? _signatureDebounceTimer;
     private int _inputBoxCaretPosition;
 
     public event EventHandler? CloseRequested;
@@ -43,6 +45,8 @@ public partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<ConversationItem> ConversationItems { get; } = [];
 
     public CompletionViewModel Completion { get; } = new();
+
+    public SignatureHelpViewModel SignatureHelp { get; } = new();
 
     public MainWindowViewModel(ReplEngine engine, HistoryService history,
         MetaCommandService metaCommandService, SessionState sessionState,
@@ -186,7 +190,7 @@ public partial class MainWindowViewModel : ObservableObject
         get
         {
             var lang = _sessionState.CurrentLanguage == Language.CSharp ? "C#" : "VB";
-            var timeoutLabel = _sessionState.TimeoutSeconds == 0 ? "No Limit" : $"{_sessionState.TimeoutSeconds}s";
+            var timeoutLabel = _sessionState.TimeoutSeconds == 0 ? "" : $"Timeout: {_sessionState.TimeoutSeconds}s | ";
             var themeLabel = _themeService.CurrentTheme switch
             {
                 AppTheme.Light => "Light",
@@ -194,7 +198,7 @@ public partial class MainWindowViewModel : ObservableObject
                 _ => ""
             };
             var themePart = string.IsNullOrEmpty(themeLabel) ? "" : $"{themeLabel} | ";
-            return $"{themePart}{lang} | Timeout: {timeoutLabel} | Refs: {_sessionState.ExtraReferences.Count} | Imports: {_sessionState.ExtraImports.Count}";
+            return $"{lang} | {themePart}{timeoutLabel}Refs: {_sessionState.ExtraReferences.Count} | Imports: {_sessionState.ExtraImports.Count}";
         }
     }
 
@@ -252,6 +256,55 @@ public partial class MainWindowViewModel : ObservableObject
         }
         catch (OperationCanceledException) { }
         catch (Exception) { Completion.Hide(); }
+    }
+
+    public void RequestSignatureHelp(string code, int cursorPosition)
+    {
+        _signatureCts?.Cancel();
+        _signatureCts?.Dispose();
+        _signatureCts = null;
+
+        _signatureDebounceTimer?.Stop();
+        _signatureDebounceTimer = new DispatcherTimer
+        {
+            Interval = TimeSpan.FromMilliseconds(150)
+        };
+        _signatureDebounceTimer.Tick += async (_, _) =>
+        {
+            _signatureDebounceTimer.Stop();
+            await FetchSignatureHelp(code, cursorPosition);
+        };
+        _signatureDebounceTimer.Start();
+    }
+
+    private async Task FetchSignatureHelp(string code, int cursorPosition)
+    {
+        _signatureCts = new CancellationTokenSource();
+        var ct = _signatureCts.Token;
+
+        var triggerChar = cursorPosition > 0 && cursorPosition <= code.Length
+            ? code[cursorPosition - 1]
+            : '\0';
+        if (triggerChar != '(' && triggerChar != ',')
+            return;
+
+        try
+        {
+            var language = SelectedLanguageIndex == 0 ? Language.CSharp : Language.VisualBasic;
+            var segments = await _completionEngine.GetSignatureHelpAsync(
+                code, cursorPosition, language, triggerChar,
+                _sessionState.ExtraReferences, _sessionState.ExtraImports, ct);
+
+            if (!ct.IsCancellationRequested)
+            {
+                if (segments is not null && segments.Count > 0)
+                    SignatureHelp.Show(segments);
+                else
+                    SignatureHelp.Hide();
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception) { SignatureHelp.Hide(); }
     }
 
     public void AcceptCompletion()

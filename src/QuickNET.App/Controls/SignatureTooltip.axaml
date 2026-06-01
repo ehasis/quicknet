@@ -1,0 +1,17 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:QuickNET.App.ViewModels"
+             x:Class="QuickNET.App.Controls.SignatureTooltip"
+             x:DataType="vm:SignatureHelpViewModel">
+    <Border Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}"
+            BorderBrush="{DynamicResource SystemControlForegroundChromeDisabledBrush}"
+            BorderThickness="1" CornerRadius="4"
+            BoxShadow="0 2 8 rgba(0,0,0,0.2)"
+            Padding="6,3" MaxWidth="700">
+        <TextBlock x:Name="SignatureTextBlock"
+                   FontFamily="Cascadia Code, Consolas, monospace"
+                   FontSize="12"
+                   TextWrapping="NoWrap"
+                   TextTrimming="CharacterEllipsis" />
+    </Border>
+</UserControl>

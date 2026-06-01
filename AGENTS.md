@@ -23,7 +23,7 @@ QuickNET.Core (classlib, net10.0)
   ├── Models/          -- records/enums: Language, CompilationInput/Result, ExecutionInput/Result, CompletionItem, etc.
   ├── Templates/       -- ITemplateEngine → CSharpTemplateEngine, VbTemplateEngine
   ├── Compilation/     -- CompilationService, AssemblyResolutionService
-  ├── Completion/      -- CompletionEngine (Roslyn AdhocWorkspace + CompletionService)
+  ├── Completion/       -- CompletionEngine (Roslyn AdhocWorkspace + CompletionService + SignatureHelpService)
   ├── Execution/       -- ExecutionService, QuickNETAssemblyLoadContext (isolated + collectible)
   ├── History/         -- HistoryManager, HistoryService, InputHistoryService
   ├── MetaCommands/    -- MetaCommandParser, MetaCommandService
@@ -95,6 +95,7 @@ Work is organized in sequential task blocks under `docs/tasks/`. Current status:
 - TASKS-14 (autocomplete engine & popup) — **done**
 - TASKS-15 (input history navigation) — **done**
 - TASKS-16 (integration & final tests) — **done**
+- TASKS-17 (signature tooltip) — **done**
 
 ## MVP Non-Goals (do not implement)
 No syntax highlighting, no CLI mode, no cross-platform (Windows only), no shared context between executions, no NuGet import at runtime.

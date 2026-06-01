@@ -1,7 +1,7 @@
 # QuickNET — Product Requirements Document
 
-> **Versão:** 1.2 — UX Avançada  
-> **Data:** 2026-05-30  
+> **Versão:** 1.3 — Signature Tooltip
+> **Data:** 2026-05-31
 > **Status:** Done
 
 ---
@@ -26,6 +26,7 @@ O **QuickNET** é uma aplicação desktop leve que funciona como um REPL (Read-E
 - **K6:** Alternância de temas (claro/escuro/alto contraste) em tempo real sem reinicialização, com detecção automática do tema do sistema operacional.
 - **K7:** Autocomplete via Roslyn CompletionService com debounce de 300ms, ativado automaticamente após `.` e manualmente via `Ctrl+Space`.
 - **K8:** Navegação de histórico de inputs via setas ↑↓ (últimos 50 inputs), com preservação do rascunho atual durante a navegação.
+- **K9:** Tooltip de assinatura de método/construtor aparece ao digitar `(` e atualiza ao digitar `,`, exibindo a melhor sobrecarga com o parâmetro ativo destacado, coexistindo com o popup de autocomplete.
 
 ---
 
@@ -55,6 +56,7 @@ O **QuickNET** é uma aplicação desktop leve que funciona como um REPL (Read-E
 | **US-10** | Como desenvolvedor, quero alternar entre tema claro, escuro e alto contraste para adequar a interface ao meu ambiente e preferência. | - `/theme light`, `/theme dark`, `/theme system` alternam o tema.<br>- Por padrão, o tema segue o sistema operacional.<br>- A troca é imediata (hot-reload) sem reiniciar a aplicação.<br>- A preferência de tema persiste entre sessões. |
 | **US-11** | Como desenvolvedor, quero autocomplete de código enquanto digito para acelerar a escrita de APIs e reduzir erros de digitação. | - Popup flutuante aparece automaticamente após `.` com debounce de 300ms.<br>- Também ativável manualmente via `Ctrl+Space`.<br>- A cada digitação com o popup aberto, a lista é atualizada.<br>- Sugestões incluem keywords da linguagem ativa e membros de tipos dos assemblies referenciados.<br>- Navegação por setas ↑↓, PageUp/PageDown, Tab e Enter para selecionar, Escape para fechar.<br>- Funciona para C# e VB.NET conforme a linguagem ativa. |
 | **US-12** | Como desenvolvedor, quero navegar pelo histórico de comandos já executados para reexecutar ou editar inputs anteriores. | - Seta ↑ navega para inputs mais antigos (até 50 entradas).<br>- Seta ↓ navega para inputs mais recentes.<br>- O rascunho atual (se houver) é preservado ao navegar e restaurado ao voltar.<br>- Histórico de inputs persiste entre sessões.<br>- Funciona mesmo com input vazio (começa do mais recente). |
+| **US-13** | Como desenvolvedor, quero ver a assinatura de métodos e construtores enquanto digito para saber quais parâmetros preencher e em qual ordem. | - Tooltip de assinatura aparece automaticamente ao digitar `(` em contexto de invocação (método ou construtor).<br>- Ao digitar `,` o tooltip atualiza destacando o próximo parâmetro.<br>- Exibe a melhor sobrecarga detectada pelo Roslyn, sem navegação manual entre sobrecargas.<br>- O tooltip é estático: não atualiza ao digitar outros caracteres, apenas em `(` e `,`.<br>- Tooltip posicionado abaixo do campo de input (`Placement="Bottom"`).<br>- Coexiste com o popup de autocomplete (ambos visíveis simultaneamente).<br>- Fecha ao pressionar `Escape`.<br>- Funciona para C# e VB.NET conforme a linguagem ativa. |
 
 ### 2.3 Acceptance Criteria (Gerais)
 
@@ -71,6 +73,7 @@ O **QuickNET** é uma aplicação desktop leve que funciona como um REPL (Read-E
 - **v1.2:** Temas (claro, escuro, alto contraste) alternáveis via `/theme` com hot-reload e detecção do SO.
 - **v1.2:** Autocomplete popup flutuante com Roslyn CompletionService (keywords + membros), debounce 300ms, ativação automática (`.`), manual (`Ctrl+Space`), e filtro em tempo real a cada digitação.
 - **v1.2:** Navegação de histórico de inputs via setas ↑↓ (50 entradas) com preservação de rascunho.
+- **v1.3:** Tooltip de assinatura de método/construtor ao digitar `(` ou `,`, com destaque do parâmetro ativo, estático entre triggers, e coexistência com o popup de autocomplete.
 
 ### 2.4 Non-Goals (v1.2)
 
@@ -122,6 +125,8 @@ Os seguintes itens estão explicitamente fora do escopo da v1.2 e serão conside
 │  │ Completion   │  │ Input       │                     │
 │  │ Engine       │  │ History     │                     │
 │  │ (Roslyn)     │  │ (Ring)      │                     │
+│  │ + Signature  │  │             │                     │
+│  │ Help         │  │             │                     │
 │  └──────────────┘  └─────────────┘                     │
 └────────────────────────────────────────────────────────┘
 ```
@@ -221,6 +226,7 @@ Compilação → Assembly em memória → Invoke Execute() → Exibe "4"
 2. Usuário define o tema via `/theme light`, `/theme dark` ou `/theme system` (padrão: system).
 3. Usuário digita código no campo de input.
    - **v1.2:** Autocomplete popup aparece automaticamente após `.` (debounce 300ms) e atualiza a lista a cada digitação. Ativação manual via `Ctrl+Space`.
+   - **v1.3:** Tooltip de assinatura aparece automaticamente ao digitar `(` em contexto de método/construtor e atualiza ao digitar `,`, destacando o parâmetro ativo. Coexiste com o popup de autocomplete.
 4. Pressiona `Enter` (single-line) ou `Shift+Enter` (multi-line) para executar.
    - **v1.2:** Seta ↑/↓ navega pelo histórico de inputs (últimos 50) sem submeter.
 5. O input aparece no painel de conversação com prefixo `>`.
@@ -521,6 +527,85 @@ public class InputHistoryService
 - Se o popup de autocomplete estiver aberto, as setas navegam no popup (não no histórico).
 - Se o popup estiver fechado, as setas navegam no histórico de inputs.
 
+### 5.11 Signature Help Engine (v1.3)
+
+O signature help exibe um tooltip com a assinatura de métodos e construtores ao digitar `(` ou `,`, usando o **Roslyn SemanticModel** para detectar o contexto de invocação e extrair informações do símbolo.
+
+**Design decisions:**
+- **Trigger:** `(` e `,` em contexto de invocação de método ou construtor. O Roslyn (via `SemanticModel.GetSymbolInfo`) determina se há um símbolo invocável no local; caso contrário, o tooltip não aparece.
+- **Melhor sobrecarga:** O SemanticModel retorna o `IMethodSymbol` correspondente. Apenas a primeira sobrecarga candidata é usada (sem navegação manual entre sobrecargas).
+- **Parâmetro ativo:** Determinado contando os argumentos já digitados na `ArgumentList`. O parâmetro correspondente é destacado visualmente.
+- **Estático:** O tooltip permanece visível sem alterações ao digitar caracteres que não sejam `(` ou `,`. Fecha apenas via `Escape` ou ao executar o código.
+- **Coexistência:** O tooltip e o popup de autocomplete são independentes e podem estar visíveis simultaneamente.
+
+**Arquitetura:**
+
+```
+Input do Usuário: "Math.Max("
+        │
+        ├── TriggerHelper.ShouldTriggerSignatureHelp(text, position)
+        │      │
+        │      v
+        │   CompletionEngine.GetSignatureHelpAsync(code, position, language, triggerChar)
+        │      │
+        │      v
+        │   WrapForCompletion + GetOrCreateWorkspace (reutiliza workspace do autocomplete)
+        │      │
+        │      v
+        │   SemanticModel.GetSymbolInfo() → IMethodSymbol
+        │      │
+        │      v
+        │   List<SignatureHelpSegment> (texto + flag de parâmetro ativo)
+        │
+        └── UI: SignatureTooltip (TextBlock com Inlines, parâmetro ativo em cor de destaque)
+```
+
+**Modelo de segmento de assinatura:**
+
+```csharp
+public sealed record SignatureHelpSegment(string Text, bool IsActiveParameter);
+```
+
+**SignatureHelpViewModel (QuickNET.App):**
+
+```csharp
+public partial class SignatureHelpViewModel : ObservableObject
+{
+    public string SignatureText { get; }          // assinatura completa formatada
+    public bool IsVisible { get; }                // visibilidade do tooltip
+    public int ActiveParameterStart { get; }      // índice do char onde começa o parâmetro ativo
+    public int ActiveParameterLength { get; }     // comprimento do texto do parâmetro ativo
+
+    public void Show(IReadOnlyList<SignatureHelpSegment> segments);
+    public void Hide();
+}
+```
+
+**SignatureTooltip (QuickNET.App):**
+
+- `UserControl` com `Border` e `TextBlock`.
+- Code-behind monta `Inlines` (coleção de `Run`) com cores distintas: `SystemControlForegroundBaseHighBrush` para texto normal, `SystemControlForegroundAccentBrush` para o parâmetro ativo.
+- Máximo de 700px de largura com truncamento (`CharacterEllipsis`).
+
+**Integração no MainWindowViewModel:**
+
+- `RequestSignatureHelp(code, cursorPosition)` com debounce de 150ms (mais curto que o de autocomplete para resposta imediata ao `(`).
+- `FetchSignatureHelp` chama `_completionEngine.GetSignatureHelpAsync()` e atualiza `SignatureHelp.Show(segments)` ou `SignatureHelp.Hide()`.
+
+**Integração no MainWindow (axaml + axaml.cs):**
+
+- Segundo `Popup` com `Placement="Bottom"` (abaixo do input).
+- `TextChanged` handler: branch independente para signature help — trigger em `(` ou `,` abre/atualiza; sem trigger mantém estático.
+- `OnKeyDown`: `Escape` fecha ambos os popups (completion + signature).
+- `PropertyChanged` watcher no VM sincroniza os Inlines do `SignatureTooltip`.
+
+**Reutilização de infraestrutura:**
+
+- Nenhum novo serviço registrado no DI — o método `GetSignatureHelpAsync` está no `CompletionEngine` existente.
+- Reutiliza `WrapForCompletion` e `GetOrCreateWorkspace` (mesmo `AdhocWorkspace` do autocomplete).
+- Usa APIs 100% públicas do Roslyn (`SemanticModel`, `IMethodSymbol`, `InvocationExpressionSyntax`, `ObjectCreationExpressionSyntax`).
+- **Formatação por linguagem:** A sintaxe da assinatura segue a linguagem ativa. C#: `int Math.Max(int val1, int val2)` (tipo antes do parâmetro, tipo de retorno como prefixo). VB.NET: `Function Max(val1 As Integer, val2 As Integer) As Integer` (nome do parâmetro antes do tipo, `Sub`/`Function` como prefixo, tipo de retorno como sufixo). Os nomes de tipo usam `SymbolDisplayFormat.MinimallyQualifiedFormat` do Roslyn, que gera aliases específicos da linguagem (ex.: `int` em C#, `Integer` em VB.NET).
+
 ---
 
 ## 6. Testing Strategy
@@ -557,6 +642,9 @@ public class InputHistoryService
 | **Input History Service** | Gravação de entradas, navegação ↑/↓, preservação de rascunho, reset, deduplicação consecutiva, limite de 50. | Unit |
 | **Input History Persistence** | Serialização/desserialização de `input-history.json`, carregamento ao iniciar, fallback para arquivo corrompido. | Unit |
 | **Input History UI** | Interceptação de Key.Up/Key.Down no InputBox, coexistência com popup de autocomplete. | Unit |
+| **Signature Help Engine** | `GetSignatureHelpAsync` retorna assinatura para métodos/construtores, retorna `null` para não-invocações (`if (`, `while (`), destaque do parâmetro ativo baseado nos argumentos digitados, cancelamento via `CancellationToken`, suporte a C# e VB.NET. | Unit |
+| **Signature Help Triggers** | `ShouldTriggerSignatureHelp` retorna `true` para `(` e `,`, `false` para outros caracteres e posições inválidas. | Unit |
+| **Signature Help ViewModel** | `Show`/`Hide` alternam `IsVisible`, `Show` com segmentos preenche `SignatureText` e `ActiveParameterStart`/`Length`, segmentos vazios não abrem o tooltip. | Unit |
 
 ### 6.3 Coverage Target
 
@@ -574,7 +662,7 @@ public class InputHistoryService
 | **Tempo de compilação elevado** para snippets complexos | Experiência degradada | Cache de assemblies do framework; medição de performance desde o MVP. |
 | **Memory leak** por assemblies acumulados em memória | Crash após muitas execuções | Uso de `AssemblyLoadContext` isolado e descartável por execução (já especificado no compilation model). |
 | **Ausência de syntax highlighting** reduz apelo visual | Adoção menor | Adiado para v3.0; compensado pelo autocomplete e temas na v1.2. |
-| **Complexidade do Roslyn CompletionService** gera popup lento ou com sugestões incorretas | Experiência degradada | Debounce de 300ms, cancelamento de requisições anteriores, cache do AdhocWorkspace. |
+| **Complexidade do Roslyn CompletionService** gera popup lento ou com sugestões incorretas | Experiência degradada | Debounce de 300ms, cancelamento de requisições anteriores, cache do AdhocWorkspace. Signature Help usa SemanticModel (API pública) sem dependência de serviços internos. |
 | **Diferenças de comportamento C# vs VB.NET** no Roslyn | Funcionalidade inconsistente | Testar ambos os caminhos igualmente desde o início. |
 
 ### 7.2 Phased Roadmap
@@ -603,6 +691,14 @@ public class InputHistoryService
 - [x] Navegação de histórico de inputs via setas ↑↓ (últimos 50)
 - [x] `/theme` meta-comando
 - [x] Testes unitários e de integração para todas as novas features
+
+#### v1.3 — "Signature Tooltip" ✅
+- [x] Tooltip de assinatura de método/construtor ao digitar `(` e `,`
+- [x] Destaque do parâmetro ativo baseado nos argumentos já digitados
+- [x] Coexistência com popup de autocomplete (ambos visíveis simultaneamente)
+- [x] Reutilização do `AdhocWorkspace` e wrapping do `CompletionEngine`
+- [x] APIs 100% públicas do Roslyn (SemanticModel + IMethodSymbol)
+- [x] Testes unitários para engine, triggers e ViewModel (20 novos, 240 total)
 
 #### v2.0 — "Cross-Platform & Extensibility"
 - [ ] Suporte a Linux e macOS

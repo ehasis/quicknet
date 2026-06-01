@@ -103,8 +103,19 @@ public partial class MainWindow : Window
                     return;
                 case Key.Escape:
                     vm.Completion.Hide();
+                    vm.SignatureHelp.Hide();
                     e.Handled = true;
                     return;
+            }
+        }
+
+        if (e.Key == Key.Escape)
+        {
+            if (vm.SignatureHelp.IsVisible)
+            {
+                vm.SignatureHelp.Hide();
+                e.Handled = true;
+                return;
             }
         }
 
@@ -151,7 +162,21 @@ public partial class MainWindow : Window
             InputBox.CaretIndex = position;
         };
 
+        vm.SignatureHelp.PropertyChanged += (_, args) =>
+        {
+            if (args.PropertyName is nameof(SignatureHelpViewModel.SignatureText)
+                or nameof(SignatureHelpViewModel.ActiveParameterStart)
+                or nameof(SignatureHelpViewModel.ActiveParameterLength))
+            {
+                SignatureTooltipControl.UpdateSignature(
+                    vm.SignatureHelp.SignatureText,
+                    vm.SignatureHelp.ActiveParameterStart,
+                    vm.SignatureHelp.ActiveParameterLength);
+            }
+        };
+
         CompletionOverlay.PlacementTarget = InputBox;
+        SignatureOverlay.PlacementTarget = InputBox;
 
         InputBox.TextChanged += (_, _) =>
         {
@@ -164,6 +189,13 @@ public partial class MainWindow : Window
             }
             _isNavigatingHistory = false;
             _isAcceptingCompletion = false;
+
+            var isSignatureTrigger = TriggerHelper.ShouldTriggerSignatureHelp(text, pos);
+
+            if (isSignatureTrigger)
+            {
+                vm.RequestSignatureHelp(text, pos);
+            }
 
             if (vm.Completion.IsVisible)
             {

@@ -70,7 +70,16 @@
                HorizontalOffset="0" VerticalOffset="-4"
                Grid.RowSpan="3">
             <controls:CompletionPopup x:Name="CompletionPopupControl"
-                                       DataContext="{Binding Completion}" />
+                                        DataContext="{Binding Completion}" />
+        </Popup>
+
+        <Popup x:Name="SignatureOverlay"
+               IsOpen="{Binding SignatureHelp.IsVisible}"
+               Placement="Bottom"
+               HorizontalOffset="0" VerticalOffset="4"
+               Grid.RowSpan="3">
+            <controls:SignatureTooltip x:Name="SignatureTooltipControl"
+                                        DataContext="{Binding SignatureHelp}" />
         </Popup>
     </Grid>
 </Window>

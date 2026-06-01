@@ -1,6 +1,7 @@
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.VisualBasic;
 using QuickNET.Compilation;
@@ -71,6 +72,142 @@ public class CompletionEngine
                 || (i.FilterText ?? i.DisplayText).StartsWith(filterText, StringComparison.OrdinalIgnoreCase))
             .Select(i => MapToCompletionItem(i, document))
             .ToList();
+    }
+
+    public async Task<IReadOnlyList<SignatureHelpSegment>?> GetSignatureHelpAsync(
+        string sourceCode,
+        int cursorPosition,
+        Language language,
+        char triggerCharacter,
+        IReadOnlyList<string>? extraReferences = null,
+        IReadOnlyList<string>? extraImports = null,
+        CancellationToken ct = default)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        var (wrappedCode, adjustedPosition) = WrapForCompletion(sourceCode, cursorPosition, language);
+
+        var workspace = GetOrCreateWorkspace(wrappedCode, language, extraReferences, extraImports);
+        var project = workspace.CurrentSolution.Projects.FirstOrDefault();
+        if (project is null) return null;
+
+        var document = project.Documents.FirstOrDefault();
+        if (document is null) return null;
+
+        var sourceText = SourceText.From(wrappedCode);
+        document = document.WithText(sourceText);
+
+        var semanticModel = await document.GetSemanticModelAsync(ct);
+        if (semanticModel is null) return null;
+
+        var syntaxTree = await document.GetSyntaxTreeAsync(ct);
+        if (syntaxTree is null) return null;
+
+        var root = await syntaxTree.GetRootAsync(ct);
+        var token = root.FindToken(adjustedPosition > 0 ? adjustedPosition - 1 : 0);
+
+        IMethodSymbol? methodSymbol = null;
+        int argumentCount = 0;
+
+        if (language == Language.CSharp)
+        {
+            var invocation = token.Parent?.AncestorsAndSelf()
+                .OfType<InvocationExpressionSyntax>()
+                .FirstOrDefault();
+
+            var creation = token.Parent?.AncestorsAndSelf()
+                .OfType<ObjectCreationExpressionSyntax>()
+                .FirstOrDefault();
+
+            if (invocation is not null)
+            {
+                var symbolInfo = semanticModel.GetSymbolInfo(invocation);
+                methodSymbol = (symbolInfo.Symbol ?? symbolInfo.CandidateSymbols.FirstOrDefault()) as IMethodSymbol;
+                argumentCount = invocation.ArgumentList.Arguments.Count;
+            }
+            else if (creation is not null)
+            {
+                var symbolInfo = semanticModel.GetSymbolInfo(creation);
+                methodSymbol = (symbolInfo.Symbol ?? symbolInfo.CandidateSymbols.FirstOrDefault()) as IMethodSymbol;
+                if (creation.ArgumentList is not null)
+                    argumentCount = creation.ArgumentList.Arguments.Count;
+            }
+        }
+        else
+        {
+            var vbInvocation = token.Parent?.AncestorsAndSelf()
+                .OfType<Microsoft.CodeAnalysis.VisualBasic.Syntax.InvocationExpressionSyntax>()
+                .FirstOrDefault();
+
+            var vbCreation = token.Parent?.AncestorsAndSelf()
+                .OfType<Microsoft.CodeAnalysis.VisualBasic.Syntax.ObjectCreationExpressionSyntax>()
+                .FirstOrDefault();
+
+            if (vbInvocation is not null)
+            {
+                var symbolInfo = semanticModel.GetSymbolInfo(vbInvocation);
+                methodSymbol = (symbolInfo.Symbol ?? symbolInfo.CandidateSymbols.FirstOrDefault()) as IMethodSymbol;
+                argumentCount = vbInvocation.ArgumentList.Arguments.Count;
+            }
+            else if (vbCreation is not null)
+            {
+                var symbolInfo = semanticModel.GetSymbolInfo(vbCreation);
+                methodSymbol = (symbolInfo.Symbol ?? symbolInfo.CandidateSymbols.FirstOrDefault()) as IMethodSymbol;
+                if (vbCreation.ArgumentList is not null)
+                    argumentCount = vbCreation.ArgumentList.Arguments.Count;
+            }
+        }
+
+        if (methodSymbol is null) return null;
+
+        int activeParamIndex = argumentCount > 0 ? argumentCount - 1 : 0;
+        if (activeParamIndex >= methodSymbol.Parameters.Length)
+            activeParamIndex = methodSymbol.Parameters.Length - 1;
+        if (activeParamIndex < 0) activeParamIndex = 0;
+
+        var segments = new List<SignatureHelpSegment>();
+
+        if (language == Language.CSharp)
+        {
+            segments.Add(new SignatureHelpSegment(
+                $"{methodSymbol.ReturnType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)} {methodSymbol.Name}(", false));
+
+            for (int i = 0; i < methodSymbol.Parameters.Length; i++)
+            {
+                var p = methodSymbol.Parameters[i];
+                if (i > 0)
+                    segments.Add(new SignatureHelpSegment(", ", false));
+                segments.Add(new SignatureHelpSegment(
+                    $"{p.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)} {p.Name}", i == activeParamIndex));
+            }
+
+            segments.Add(new SignatureHelpSegment(")", false));
+        }
+        else
+        {
+            var isFunction = methodSymbol.ReturnType.SpecialType != SpecialType.System_Void;
+            segments.Add(new SignatureHelpSegment(
+                isFunction ? "Function " : "Sub ", false));
+            segments.Add(new SignatureHelpSegment(
+                $"{methodSymbol.Name}(", false));
+
+            for (int i = 0; i < methodSymbol.Parameters.Length; i++)
+            {
+                var p = methodSymbol.Parameters[i];
+                if (i > 0)
+                    segments.Add(new SignatureHelpSegment(", ", false));
+                segments.Add(new SignatureHelpSegment(
+                    $"{p.Name} As {p.Type.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)}", i == activeParamIndex));
+            }
+
+            segments.Add(new SignatureHelpSegment(")", false));
+
+            if (isFunction)
+                segments.Add(new SignatureHelpSegment(
+                    $" As {methodSymbol.ReturnType.ToDisplayString(SymbolDisplayFormat.MinimallyQualifiedFormat)}", false));
+        }
+
+        return segments;
     }
 
     private static (string wrappedCode, int adjustedPosition) WrapForCompletion(
