@@ -1,5 +1,7 @@
 # QuickNET
 
+![QuickNET Screenshot](docs/quicknet.png)
+
 A .NET desktop REPL for **C# and VB.NET** using Roslyn in-memory compilation and Avalonia UI.
 
 Write and execute code snippets interactively — no project setup, no boilerplate. Windows-only MVP targeting .NET 10.
@@ -82,9 +84,7 @@ QuickNET.Tests (MSTest.Sdk, net10.0-windows)
 
 ## Development
 
-> This project was developed using [OpenCode](https://opencode.ai) + DeepSeek V4 Pro Max.
-
-All C# files use file-scoped namespaces. Build outputs go under `artifacts/` (configured via `Directory.Build.props`). Tests use MSTest.Sdk with method-level parallelization and constructor-based DI.
+This project was developed using [OpenCode](https://opencode.ai) + [DeepSeek V4 Pro](https://deepseek.com/en/) model with **Max** reasoning.
 
 ## License
 
